@@ -7,7 +7,7 @@ import numpy as np
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForFeatureExtraction
 
-TITLE = 'Exploring CORDIS'
+TITLE = 'Ex-CORDIS'
 GOOGLE_API = 'non_disponibile' #TODO: TO-REMOVE-ASKAI-RAG
 
 projects_df  = pd.read_parquet('data/docs.parquet')
