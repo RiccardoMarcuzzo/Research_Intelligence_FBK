@@ -1,0 +1,172 @@
+/* Spazio per la sidebar sui layout desktop */
+@media (min-width: 768px) {
+  .content {
+    margin-left: 16rem;  /* stessa larghezza della sidebar */
+    padding: 2rem;       /* opzionale, migliora leggibilità */
+  }
+}
+
+/* Layout mobile: sidebar nascosta = reset margine */
+@media (max-width: 767px) {
+  .content {
+    margin-left: 0;
+    padding: 1rem; 
+  }
+}
+
+/* Mobile: sidebar full width */
+@media (max-width: 768px) {
+    #doc-sidebar {
+        width: 100vw !important;
+    }
+}
+
+/* colore del testo selezionato e digitato nei dropdown */
+.Select-control,
+.Select-value-label,
+.Select-input > input {
+    color: #000 !important;  /* testo nero */
+}
+
+/* placeholder resta grigio scuro come nel tema bootstrap */
+.Select-placeholder {
+    color: #6c757d !important;  /* grigio scuro standard Bootstrap */
+}
+
+/* testo nero nei risultati di ricerca */
+.VirtualizedSelectOption {
+    color: #000 !important;
+}
+
+/* testo nero nei div informativi su sfondo bianco */
+.bg-white {
+    color: #000 !important;
+}
+
+/* --- REGOLE SOLO PER LA PAGINA TOPICS --- */
+
+/* Dropdown: bordo quando focalizzato o aperto */
+#topics-page .Select-control:hover {
+    border-color: #28a745 !important;
+}
+
+#topics-page .is-focused:not(.is-open) > .Select-control {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 1px rgba(40, 167, 69, 0.25) !important;
+}
+
+#topics-page .is-open > .Select-control {
+    border-color: #28a745 !important;
+}
+
+/* Colore dell'opzione evidenziata nel menu a tendina */
+#topics-page .VirtualizedSelectFocusedOption {
+    background-color: rgba(40, 167, 69, 0.15) !important;
+    color: #1e7e34 !important;
+}
+
+/* Bordo del contenitore principale nel multi-dropdown */
+#topics-page .Select--multi .Select-control {
+    border-color: #d1d1d1; /* Colore base a riposo */
+}
+
+#topics-page .Select--multi.is-focused .Select-control {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 1px rgba(40, 167, 69, 0.25) !important;
+}
+
+/* Colore dei "Tag" (le opzioni selezionate come FP1, FP2...) */
+#topics-page .Select--multi .Select-value {
+    background-color: rgba(40, 167, 69, 0.1) !important; /* Fondo verde chiarissimo */
+    border: 1px solid #28a745 !important; /* Bordo verde */
+    color: #28a745 !important; /* Testo verde */
+}
+
+/* Colore della "X" per rimuovere il tag */
+#topics-page .Select--multi .Select-value-icon {
+    border-right: 1px solid rgba(40, 167, 69, 0.5) !important;
+    color: #28a745 !important;
+}
+
+#topics-page .Select--multi .Select-value-icon:hover {
+    background-color: rgba(40, 167, 69, 0.2) !important;
+    color: #1e7e34 !important;
+}
+
+/* RadioItems: pallino verde quando selezionato */
+#topics-page .form-check-input:checked {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+}
+
+/* RadioItems: alone al click */
+#topics-page .form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important;
+    border-color: #28a745 !important;
+}
+
+/* --- REGOLE SOLO PER LA PAGINA ASK AI --- */
+
+/* Dropdown: bordo quando focalizzato o aperto */
+#rag-page .Select-control:hover {
+    border-color: #cc3030 !important;
+}
+
+#rag-page .is-focused:not(.is-open) > .Select-control {
+    border-color: #cc3030 !important;
+    box-shadow: 0 0 0 1px rgba(167, 40, 40, 0.25) !important;
+}
+
+#rag-page .is-open > .Select-control {
+    border-color: #cc3030 !important;
+}
+
+/* Colore dell'opzione evidenziata nel menu a tendina */
+#rag-page .VirtualizedSelectFocusedOption {
+    background-color: rgba(167, 40, 40, 0.15) !important;
+    color: #de4949 !important;
+}
+
+/* Bordo del contenitore principale nel multi-dropdown */
+#rag-page .Select--multi .Select-control {
+    border-color: #d1d1d1; /* Colore base a riposo */
+}
+
+#rag-page .Select--multi.is-focused .Select-control {
+    border-color: #cc3030 !important;
+    box-shadow: 0 0 0 1px rgba(167, 40, 40, 0.25) !important;
+}
+
+/* Colore dei "Tag" (le opzioni selezionate come FP1, FP2...) */
+#rag-page .Select--multi .Select-value {
+    background-color: rgba(167, 40, 40, 0.1) !important; /* Fondo verde chiarissimo */
+    border: 1px solid #cc3030 !important; /* Bordo verde */
+    color: #cc3030 !important; /* Testo verde */
+}
+
+/* Colore della "X" per rimuovere il tag */
+#rag-page .Select--multi .Select-value-icon {
+    border-right: 1px solid rgba(167, 40, 40, 0.5) !important;
+    color: #cc3030 !important;
+}
+
+#rag-page .Select--multi .Select-value-icon:hover {
+    background-color: rgba(167, 40, 40, 0.2) !important;
+    color: #de4949 !important;
+}
+
+/* AI is thinking: responsive dots */
+@keyframes typing {
+    0%, 60%, 100% {
+        opacity: 0.3;
+    }
+    30% {
+        opacity: 1;
+    }
+}
+
+.typing-dot {
+    animation: typing 1.4s infinite;
+    font-weight: bold;
+    font-size: 1.5rem;
+}
