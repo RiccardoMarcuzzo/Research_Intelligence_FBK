@@ -1,7 +1,6 @@
 import pickle
 import joblib
 import pandas as pd
-import numpy as np
 import argparse
 
 # questi import sono usati solo per RAG, dal momento che per RANK è stato optato per un lazy loading dentro _topics.py. Valutare se fare lo stesso per RAG.
@@ -25,10 +24,19 @@ if not base_path.endswith('/'): base_path = base_path + '/'
 
 PORT = args.port
 
-projects_df  = pd.read_parquet('data/docs.parquet')
-orgs_df      = pd.read_parquet('data/orgs.parquet')
-topics_df    = pd.read_parquet('data/topics.parquet')
-org_topics_df = pd.read_parquet('data/org_topics.parquet')
+projects_df  = pd.read_parquet('data/docs.parquet',
+                               columns=['id', 'title', 'objective', 'fp', 'topic_name'])
+orgs_df      = pd.read_parquet('data/orgs.parquet', 
+                               columns=['name', 'projectIDs', 'country_code_ok', 
+                                        'organizationURL', 'activityType',
+                                        'organisationID'])
+topics_df    = pd.read_parquet('data/topics.parquet', 
+                               columns=['level_1', 'level_2', 'level_3', 'level_4'])
+org_topics_df = pd.read_parquet('data/org_topics.parquet',
+                                columns=['organisationID', 'fp', 'topic_name_hierarchy',
+                                         'n_proj', 'netEcContribution', 'n_publ', 
+                                         'projIds', 'scopus_id', 'country_code_ok',
+                                         'name']) # se usiamo anche 'role', a quel punto vengono usate tutte
 
 with open('data/labels.pkl', 'rb') as f:
     labels_pkl = pickle.load(f)

@@ -311,9 +311,9 @@ def update_dropdown_org1(search_value):
 )
 def show_info_org1(selected_org, metric, fp_list):
     if not selected_org:
-        return [], None, 'N/A', 'N/A', 'N/A', 'N/A'
+        return [], None, None, 'N/A', 'N/A', 'N/A', 'N/A'
     
-    info_content, topics_data, org_data, tot_proj, tot_eur, tot_publ, times_cp = script.show_info_new(
+    info_content, topics_data, org_data, tot_proj, tot_eur, tot_publ, times_cp = script.show_info(
         selected_org=selected_org,
         metric=metric,
         fp_list=fp_list)
@@ -345,9 +345,9 @@ def update_dropdown_org2(search_value):
 )
 def show_info_org2(selected_org, metric, fp_list):
     if not selected_org:
-        return [], None
+        return [], None, None, 'N/A', 'N/A', 'N/A', 'N/A'
     
-    info_content, topics_data, org_data, tot_proj, tot_eur, tot_publ, times_cp = script.show_info_new(
+    info_content, topics_data, org_data, tot_proj, tot_eur, tot_publ, times_cp = script.show_info(
         selected_org=selected_org,
         metric=metric,      
         fp_list=fp_list,

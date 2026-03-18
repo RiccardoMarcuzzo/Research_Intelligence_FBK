@@ -30,159 +30,6 @@ def populate_kpis(org_df):
 
     return tot_proj, tot_eur, tot_publ, tot_tops
 
-def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=True):
-
-    # --- CONFIGURAZIONE METRICHE ---
-    METRIC_CONFIG = {
-        'n_progetti':        ('size',  'topic_name',       'document(s)'),
-        'euro_finanziamenti':('sum',   'netEcContribution', '€ funded'),
-        'n_publ':            ('sum',   'publication',       'publication(s)'),
-    }
-
-    # --- PREPARAZIONE DATI ---
-    row = orgs_df[orgs_df['name'] == selected_org].iloc[0]
-    filtered_projects = (
-        projects_df[projects_df['id'].isin(row['projectIDs'])]
-        .copy()
-        .pipe(lambda df: df[df['fp'].isin(fp_list)])
-    )
-
-    if filtered_projects.empty:
-        fig = go.Figure()
-        fig.update_layout(
-            title="No topics found for selected framework programme",
-            height=400 if display_projects else 300,
-            annotations=[{
-                'text': 'Try selecting different framework programmes',
-                'xref': 'paper', 'yref': 'paper',
-                'x': 0.5, 'y': 0.5,
-                'showarrow': False,
-                'font': {'size': 16, 'color': 'gray'},
-            }]
-        )
-        return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, 'N/A', 'N/A', 'N/A', 'N/A'
-    
-    # --- AGGREGAZIONE ---
-    agg_func, agg_col, hover_unit = METRIC_CONFIG[metric]
-    agg_value = ('topic_name', agg_func) if agg_func == 'size' else (agg_col, agg_func)
-
-    unique_topics = (
-        filtered_projects
-        .groupby(['topic_name', 'topic_num'])
-        .agg(value=agg_value)
-        .reset_index()
-    )
-    unique_topics['custom_hover'] = (
-        '<b>' + unique_topics['topic_name'] + '</b><br><i>' +
-        unique_topics['value'].astype(str) + f' {hover_unit}</i><extra></extra>'
-    )
-    unique_topics['topic_name_reduced'] = np.where(
-        unique_topics['topic_name'].str.len() > 11,
-        unique_topics['topic_name'].str.slice(0, 11) + '...',
-        unique_topics['topic_name']
-    )
-
-    palette = qualitative.Dark24
-    unique_topics['colors'] = [
-        palette[i % len(palette)] for i in range(len(unique_topics))
-    ]
-
-    # --- SOTTOINTESTAZIONE ---
-    info_elements = []
-    country_code = row.get('country_code_ok')
-    if pd.notna(country_code):
-        flag = chr(ord(country_code[0].upper()) + 127397) + chr(ord(country_code[1].upper()) + 127397)
-        info_elements.append(html.P(f"{flag} {country_code}", style={'marginRight': '15px'}))
-    url = row.get('organizationUrl')
-    if pd.notna(url):
-        info_elements.append(html.A(
-            f'{url}', href=url, target='_blank', rel='noopener noreferrer',
-            style={'textDecoration': 'none', 'color': '#007BFF', 'marginRight': '15px'}
-        ))
-    activity_type = row.get('activityType')
-    if pd.notna(activity_type):
-        info_elements.append(html.P(f"Type: {activity_type}"))
-
-    # --- GRAFICO ---
-    if len(unique_topics) > 5:
-        fig = go.Figure(data=[go.Bar(
-            x=unique_topics['value'],
-            y=unique_topics['topic_name_reduced'],
-            orientation='h',
-            hovertemplate=unique_topics['custom_hover'],
-            marker=dict(color=unique_topics['colors'])
-        )])
-        fig.update_layout(
-            barmode='relative',
-            xaxis=dict(dtick=1, tickformat=',d'),
-        )
-    else:
-        fig = go.Figure(go.Pie(
-            labels=unique_topics['topic_name'],
-            values=unique_topics['value'],
-            hovertemplate=unique_topics['custom_hover'],
-            marker=dict(colors=unique_topics['colors'])
-        ))
-
-    fig.update_layout(
-        font_size=10,
-        margin=dict(l=0, r=20, t=30, b=30),
-        showlegend=False,
-        dragmode='pan',
-        xaxis_title=None,
-        yaxis_title=None,
-        height=400 if display_projects else 300
-    )
-
-    # --- HEADER ORGANIZZAZIONE ---
-    org_header = [
-        html.H3(row['name'], style={'marginBottom': '5px'}),
-        html.Div(info_elements, style={
-            'display': 'flex', 'flexWrap': 'wrap',
-            'alignItems': 'center', 'fontSize': '14px', 'marginBottom': '10px'
-        }),
-    ]
-
-    graph_row = dbc.Row(
-        dcc.Graph(figure=fig, config={'scrollZoom': True}),
-        className="mb-3"
-    )
-
-    # --- ACCORDION PROGETTI ---
-    if display_projects:
-        accordion_items = [
-            dbc.AccordionItem(
-                html.Div([
-                    html.A(
-                        [f'• {proj.title}', html.I(className="bi bi-box-arrow-up-right ms-2")],
-                        href=f'https://www.google.com/search?q=CORDIS%20{proj.title}',
-                        target='_blank', rel='noopener noreferrer',
-                        style={'textDecoration': 'none', 'display': 'block',
-                               'marginBottom': '8px', 'color': '#007BFF'}
-                    )
-                    for proj in group.itertuples()
-                ], style={'padding': '5px 0'}),
-                title=f"{topic} ({len(group)} projects)",
-                item_id=f"topic-{idx}"
-            )
-            for idx, (topic, group) in enumerate(filtered_projects.groupby('topic_name'))
-        ]
-
-        accordion_row = html.Div(
-            [
-                html.H5("Projects:", className="mb-2"),
-                dbc.Accordion(accordion_items, start_collapsed=True, flush=True, className="mb-0"),
-            ],
-            style={'maxHeight': '400px', 'height': '400px', 
-                   'boxSizing': 'border-box',
-                   'overflowY': 'auto'}
-            )
-        content_layout = org_header + [dbc.Col([graph_row, accordion_row])]
-    else:
-        content_layout = org_header + [dbc.Col([graph_row])]
-
-    return content_layout, filtered_projects.to_dict('records'), 'N/A', 'N/A', 'N/A', 'N/A'
-
 def smart_wrap(text, width=50):
     """Wrappa il testo preservando le parole intere"""
     if len(text) <= width:
@@ -194,8 +41,8 @@ def compare_organisations(org1_docs, org2_docs):
     org2_docs = pd.DataFrame(org2_docs)
     
     merged_docs = pd.concat([org1_docs, org2_docs], ignore_index=True)
-    common_rcns = merged_docs['rcn'][merged_docs['rcn'].duplicated()].unique()
-    common_projects = merged_docs[merged_docs['rcn'].isin(common_rcns)].drop_duplicates(subset='rcn')
+    common_rcns = merged_docs['id'][merged_docs['id'].duplicated()].unique()
+    common_projects = merged_docs[merged_docs['id'].isin(common_rcns)].drop_duplicates(subset='id')
 
     if common_projects.empty:
         return html.P(
@@ -229,7 +76,7 @@ def compare_organisations(org1_docs, org2_docs):
     )
 
 
-def show_info_new(selected_org, metric='n_progetti', fp_list=[], display_projects=True):
+def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=True):
 
     # STEP 1: Filtra progetti per organisationID
     row = orgs_df[orgs_df['name'] == selected_org]
@@ -391,7 +238,7 @@ def show_info_new(selected_org, metric='n_progetti', fp_list=[], display_project
                 title=f"{topic} ({len(group)} projects)",
                 item_id=f"topic-{idx}"
             )
-            for idx, (topic, group) in enumerate(filtered_projects.groupby('topic_name'))
+            for idx, (topic, group) in enumerate(filtered_projects.groupby('topic_name', observed=True))
         ]
 
         accordion_row = html.Div(
