@@ -2,6 +2,7 @@ import pickle
 import joblib
 import pandas as pd
 import numpy as np
+import argparse
 
 # questi import sono usati solo per RAG, dal momento che per RANK è stato optato per un lazy loading dentro _topics.py. Valutare se fare lo stesso per RAG.
 from transformers import AutoTokenizer
@@ -9,6 +10,20 @@ from optimum.onnxruntime import ORTModelForFeatureExtraction
 
 TITLE = 'Ex-CORDIS'
 GOOGLE_API = 'non_disponibile' #TODO: TO-REMOVE-ASKAI-RAG
+
+# Configurazione CLI 
+parser = argparse.ArgumentParser(description="Lancio della Dashboard Dash")
+
+parser.add_argument("--path", type=str, default="/research_intelligence/", help="Percorso base dell'app (es: /research_intelligence/)")
+parser.add_argument("--port", type=int, default=8050, help="Porta di esecuzione")
+args = parser.parse_args()
+
+# Pulizia del path
+base_path = args.path
+if not base_path.startswith('/'): base_path = '/' + base_path
+if not base_path.endswith('/'): base_path = base_path + '/'
+
+PORT = args.port
 
 projects_df  = pd.read_parquet('data/docs.parquet')
 orgs_df      = pd.read_parquet('data/orgs.parquet')

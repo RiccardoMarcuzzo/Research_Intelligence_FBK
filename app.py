@@ -1,20 +1,7 @@
 import dash
-import argparse
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output
-from utils import TITLE
-
-# Configurazione CLI 
-parser = argparse.ArgumentParser(description="Lancio della Dashboard Dash")
-
-parser.add_argument("--path", type=str, default="/research_intelligence/", help="Percorso base dell'app (es: /research_intelligence/)")
-parser.add_argument("--port", type=int, default=8050, help="Porta di esecuzione")
-args = parser.parse_args()
-
-# Pulizia del path
-base_path = args.path
-if not base_path.startswith('/'): base_path = '/' + base_path
-if not base_path.endswith('/'): base_path = base_path + '/'
+from utils import TITLE, base_path, PORT
 
 FBK_LOGO = 'assets/img/fbk-logo-blue.png'
 
@@ -22,10 +9,10 @@ app = dash.Dash(title=TITLE, external_stylesheets=[dbc.themes.CYBORG, dbc.icons.
                 use_pages=True, routes_pathname_prefix=base_path, requests_pathname_prefix=base_path)
 
 NAVBAR = {
-    "Topics": {"relative_path": "/"},
-    "Organisations": {"relative_path": "/organisations"},
-    "Ask AI": {"relative_path": "/rag"},
-    "Concept": {"relative_path": "/overview"},
+    "Topics": {"relative_path": f"{base_path}"},
+    "Organisations": {"relative_path": f"{base_path}organisations"},
+    "Ask AI": {"relative_path": f"{base_path}askAI"},
+    "Concept": {"relative_path": f"{base_path}concept"},
 }
 
 def generate_nav_links(current_path):
@@ -113,4 +100,4 @@ def update_nav(pathname):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=args.port)
+    app.run(debug=True, port=PORT)

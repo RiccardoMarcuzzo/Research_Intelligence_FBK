@@ -13,6 +13,7 @@ dash.register_page(
     __name__,
     name=PAGE_TITLE,
     title=f"{PAGE_TITLE} | {TITLE}",
+    path='/organisations',
     order=1
 )
 

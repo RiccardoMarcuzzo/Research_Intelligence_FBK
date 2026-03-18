@@ -12,6 +12,7 @@ dash.register_page(
     __name__,
     name=PAGE_TITLE,
     title=f"{PAGE_TITLE} | {TITLE}",
+    path='/concept',
     order=3
 )
 #--------------------------------------------

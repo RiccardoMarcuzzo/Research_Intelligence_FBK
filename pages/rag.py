@@ -6,10 +6,12 @@ from utils import TITLE, projects_df, COUNTRY_CODES
 import scripts._rag as script
 
 PAGE_TITLE = "RAG"
+
 dash.register_page(
     __name__,
     name=PAGE_TITLE,
     title=f"{PAGE_TITLE} | {TITLE}",
+    path='/askAI',
     order=2
 )
 
