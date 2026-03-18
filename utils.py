@@ -138,4 +138,3 @@ EU_COUNTRY_CODES = [
     'de', 'gr', 'hu', 'ie', 'it', 'lv', 'lt', 'lu', 'mt', 'nl', 
     'pl', 'pt', 'ro', 'sk', 'si', 'es', 'se'
 ]
-

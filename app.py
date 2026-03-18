@@ -8,6 +8,11 @@ FBK_LOGO = 'assets/img/fbk-logo-blue.png'
 app = dash.Dash(title=TITLE, external_stylesheets=[dbc.themes.CYBORG, dbc.icons.BOOTSTRAP],
                 use_pages=True, routes_pathname_prefix=base_path, requests_pathname_prefix=base_path)
 
+@app.server.route("/")
+def redirect_root():
+    from flask import redirect
+    return redirect(base_path)
+
 NAVBAR = {
     "Topics": {"relative_path": f"{base_path}"},
     "Organisations": {"relative_path": f"{base_path}organisations"},
