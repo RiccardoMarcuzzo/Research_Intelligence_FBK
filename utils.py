@@ -25,13 +25,13 @@ if not base_path.endswith('/'): base_path = base_path + '/'
 PORT = args.port
 
 projects_df  = pd.read_parquet('data/docs.parquet',
-                               columns=['id', 'title', 'objective', 'fp', 'topic_name'])
+                               columns=['id', 'title', 'objective', 'fp', 'topic_name', 'participants'])
 orgs_df      = pd.read_parquet('data/orgs.parquet', 
                                columns=['name', 'projectIDs', 'country_code_ok', 
                                         'organizationURL', 'activityType',
                                         'organisationID'])
 topics_df    = pd.read_parquet('data/topics.parquet', 
-                               columns=['level_1', 'level_2', 'level_3', 'level_4'])
+                               columns=['level_1', 'level_2', 'level_3', 'level_4', 'count'])
 org_topics_df = pd.read_parquet('data/org_topics.parquet',
                                 columns=['organisationID', 'fp', 'topic_name_hierarchy',
                                          'n_proj', 'netEcContribution', 'n_publ', 

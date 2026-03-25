@@ -419,27 +419,22 @@ def toggle_sidebar(data, is_open):
 clientside_callback(
     """
     function(iframe_id) {
-        const store = window.dash_clientside && window.dash_clientside.set_props
-            ? 'message-store'
-            : null;
-
-        function handleMessage(event) {
-            if (!event.data || event.data.type !== 'point-clicked') return;
-
-            window.dash_clientside.set_props(store, {
-                data: {
-                    type: event.data.type,
-                    rcn: event.data.rcn,
-                    timestamp: Date.now()
-                }
-            });
+    function handleMessage(event) {
+        if (!event.data || event.data.type !== 'point-clicked') return;
+        if (!window.dash_clientside || !window.dash_clientside.set_props) {
+            return;
         }
-
-        window.removeEventListener('message', handleMessage);
-        window.addEventListener('message', handleMessage);
-
-        return window.dash_clientside.no_update;
+        window.dash_clientside.set_props('message-store', {
+            data: {
+                type: event.data.type,
+                id: event.data.id
+            }
+        });
     }
+    window.removeEventListener('message', handleMessage);
+    window.addEventListener('message', handleMessage);
+    return window.dash_clientside.no_update;
+}
     """,
     Output('message-store', 'data'),
     Input('datamapplot', 'id'),
@@ -449,32 +444,12 @@ clientside_callback(
     Input('message-store', 'data'),
     prevent_initial_call=True,
 )
-def show_doc_details(message_data):
+def show_doc_details(message_data):   
     if not message_data:
         return "Click a point on the map to display project details..."
+    
+    proj_id = message_data.get('id')
+    
+    return script.populate_doc_canvas(int(proj_id))
 
-    row = utils.projects_df[utils.projects_df['rcn'] == int(message_data.get('rcn'))].iloc[0]
-    title = row['title']
-
-    return html.Div([
-        html.P(title, style={
-            'fontWeight': 'bold',
-            'fontSize': '20px',
-            'marginTop': '0',
-            'marginBottom': '10px'
-        }),
-        html.P([
-            html.Span('🔎 ', style={'marginRight': '4px'}),
-            html.A('Search on Google',
-                   href=f'https://www.google.com/search?q=CORDIS%20{title}',
-                   target='_blank',
-                   rel='noopener noreferrer',
-                   style={'textDecoration': 'none','color': '#007BFF','fontWeight': 'bold'})
-        ], style={'fontSize': '14px'}),
-        html.P(['🇪🇺 ', html.Span('Framework Programme: ', style={'fontWeight': 'bold'}), row['fp']]),
-        html.P(['💡 ', html.Span('Topic: ', style={'fontWeight': 'bold'}), row['topic_name']]),
-        html.P(['🏢 ', html.Span('Participants: ', style={'fontWeight': 'bold'}), ', '.join(row['participants'])]),
-        html.Hr(),
-        html.P(['📝 Abstract'], style={'fontWeight': 'bold'}),
-        html.P(row['objective'], style={'fontSize': '14px', 'lineHeight': '1.5'})
-    ], style={'color': 'black'})
+    

@@ -1,6 +1,7 @@
 import plotly.graph_objects as go
+from dash import html
 
-from utils import topics_df, labels_pkl
+from utils import projects_df, topics_df, labels_pkl
 
 def generate_treemap():
     # Define macro-cluster color mapping
@@ -67,3 +68,32 @@ def generate_treemap():
         plot_bgcolor='white'
     )
     return fig
+
+def populate_doc_canvas(proj_id):
+
+    row = projects_df[projects_df['id'] == proj_id].iloc[0]
+    title = row['title']
+
+    return html.Div([
+        html.P(title, style={
+            'fontWeight': 'bold',
+            'fontSize': '20px',
+            'marginTop': '0',
+            'marginBottom': '10px'
+        }),
+        html.P([
+            html.Span('🔎 ', style={'marginRight': '4px'}),
+            html.A('Search on Google',
+                   href=f'https://www.google.com/search?q=CORDIS%20{title}',
+                   target='_blank',
+                   rel='noopener noreferrer',
+                   style={'textDecoration': 'none','color': '#007BFF','fontWeight': 'bold'})
+        ], style={'fontSize': '14px'}),
+        html.P(['🇪🇺 ', html.Span('Framework Programme: ', style={'fontWeight': 'bold'}), row['fp']]),
+        html.P(['💡 ', html.Span('Topic: ', style={'fontWeight': 'bold'}), row['topic_name']]),
+        html.P(['🏢 ', html.Span('Participants: ', style={'fontWeight': 'bold'}), ', '.join(row['participants'])]),
+        html.Hr(),
+        html.P(['📝 Abstract'], style={'fontWeight': 'bold'}),
+        html.P(row['objective'], style={'fontSize': '14px', 'lineHeight': '1.5'})
+    ], style={'color': 'black'})
+
