@@ -65,12 +65,12 @@ def suggest_topic(query):
 
 def populate_kpis(project_df):
 
-    tot_proj = str(project_df['projIds'].explode().nunique())
+    tot_proj = str(project_df['projectIDs'].explode().nunique())
 
     eur = project_df['netEcContribution'].sum()
     tot_eur = f'{round(eur / 1_000_000, 1)} M'
 
-    tot_publ = str(project_df['scopus_id'].explode().nunique())
+    tot_publ = str(project_df['scopusID'].explode().nunique())
 
     tot_org = str(project_df['organisationID'].nunique())
 
@@ -109,9 +109,9 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
     if 'ALL' not in country_list:
         if 'EU' in country_list:
             country_list_expanded = [c for c in country_list if c != 'EU'] + EU_COUNTRY_CODES
-            proj_filtered = proj_filtered[proj_filtered['country_code_ok'].isin(country_list_expanded)]
+            proj_filtered = proj_filtered[proj_filtered['country_code'].isin(country_list_expanded)]
         else:
-            proj_filtered = proj_filtered[proj_filtered['country_code_ok'].isin(country_list)]
+            proj_filtered = proj_filtered[proj_filtered['country_code'].isin(country_list)]
     
     if proj_filtered.empty:
         fig = go.Figure()
@@ -275,11 +275,11 @@ def join_topics(topics1_orgs, topics2_orgs, metric, n_orgs):
     return [dcc.Graph(figure=fig, config={'scrollZoom': True})]
 
 def polish_df(df:pd.DataFrame, topic_name):
-    df = df.drop(columns=['topic_name_hierarchy', 'scopus_id', 'n_proj', 'n_publ', 'role'])
+    df = df.drop(columns=['topic_name_hierarchy', 'scopusID', 'n_proj', 'n_publ', 'role'])
     df['topic_name'] = topic_name
 
-    df = df.explode('projIds').reset_index(drop=True)
-    df = df.rename(columns={'projIds': 'projectID', 'name': 'org_name'})
+    df = df.explode('projectIDs').reset_index(drop=True)
+    df = df.rename(columns={'projectIDs': 'projectID', 'name': 'org_name'})
     df = df.drop_duplicates(subset=['organisationID', 'projectID']).reset_index(drop=True)
 
     return df

@@ -17,8 +17,8 @@ dash.register_page(
     order=1
 )
 
-DEFAULT_ORG = 'fondazione bruno kessler'
-COMPARISON_ORG = 'fondazione hub innovazione trentino'
+DEFAULT_ORG = 'Fondazione bruno kessler'
+COMPARISON_ORG = 'Fondazione hub innovazione trentino'
 #--------------------------------------------
 # LAYOUT      
 #--------------------------------------------
@@ -103,7 +103,7 @@ layout = dbc.Container(
                             ),
                             dcc.Dropdown(
                                 id='org2-dropdown',
-                                options=['fondazione hub innovazione trentino'],
+                                options=[COMPARISON_ORG],
                                 value=COMPARISON_ORG,
                                 placeholder='Start typing to search...',
                                 searchable=True,
@@ -183,7 +183,7 @@ layout = dbc.Container(
                             # SEARCH
                             dcc.Dropdown(
                                 id='org1-dropdown',
-                                options=['fondazione bruno kessler'],
+                                options=[DEFAULT_ORG],
                                 value=DEFAULT_ORG,
                                 placeholder='Start typing to search...',
                                 searchable=True,

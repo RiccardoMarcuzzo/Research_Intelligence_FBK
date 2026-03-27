@@ -24,24 +24,16 @@ if not base_path.endswith('/'): base_path = base_path + '/'
 
 PORT = args.port
 
-projects_df  = pd.read_parquet('data/docs.parquet',
-                               columns=['id', 'title', 'objective', 'fp', 'topic_name', 'participants'])
-orgs_df      = pd.read_parquet('data/orgs.parquet', 
-                               columns=['name', 'projectIDs', 'country_code_ok', 
-                                        'organizationURL', 'activityType',
-                                        'organisationID'])
+projects_df  = pd.read_parquet('data/docs2.parquet')
+orgs_df      = pd.read_parquet('data/orgs2.parquet')
 topics_df    = pd.read_parquet('data/topics.parquet', 
                                columns=['level_1', 'level_2', 'level_3', 'level_4', 'count'])
-org_topics_df = pd.read_parquet('data/org_topics.parquet',
-                                columns=['organisationID', 'fp', 'topic_name_hierarchy',
-                                         'n_proj', 'netEcContribution', 'n_publ', 
-                                         'projIds', 'scopus_id', 'country_code_ok',
-                                         'name']) # se usiamo anche 'role', a quel punto vengono usate tutte
+org_topics_df = pd.read_parquet('data/org_topics2.parquet')
 
 with open('data/labels.pkl', 'rb') as f:
     labels_pkl = pickle.load(f)
 
-PROJs_No = projects_df['id'].nunique()
+PROJs_No = projects_df['projectID'].nunique()
 ORGs_No = orgs_df['organisationID'].nunique()
 TOPs_No = len(labels_pkl)
 
@@ -61,80 +53,80 @@ RAG_TOKENIZER = AutoTokenizer.from_pretrained('data/bge-m3-onnx')
 RAG_MODEL = ORTModelForFeatureExtraction.from_pretrained('data/bge-m3-onnx', provider='CPUExecutionProvider')
 """
 
-# Dizionario completo dei codici paese (lowercase come nel dataset)
+# Dizionario completo dei codici paese (uppercase come nel dataset)
 COUNTRY_CODES = {
     # Europa (UE)
-    'at': 'Austria', 'be': 'Belgium', 'bg': 'Bulgaria', 'hr': 'Croatia',
-    'cy': 'Cyprus', 'cz': 'Czech Republic', 'dk': 'Denmark', 'ee': 'Estonia',
-    'fi': 'Finland', 'fr': 'France', 'de': 'Germany', 'gr': 'Greece',
-    'hu': 'Hungary', 'ie': 'Ireland', 'it': 'Italy', 'lv': 'Latvia',
-    'lt': 'Lithuania', 'lu': 'Luxembourg', 'mt': 'Malta', 'nl': 'Netherlands',
-    'pl': 'Poland', 'pt': 'Portugal', 'ro': 'Romania', 'sk': 'Slovakia',
-    'si': 'Slovenia', 'es': 'Spain', 'se': 'Sweden',
+    'AT': 'Austria', 'BE': 'Belgium', 'BG': 'Bulgaria', 'HR': 'Croatia',
+    'CY': 'Cyprus', 'CZ': 'Czech Republic', 'DK': 'Denmark', 'EE': 'Estonia',
+    'FI': 'Finland', 'FR': 'France', 'DE': 'Germany', 'GR': 'Greece',
+    'HU': 'Hungary', 'IE': 'Ireland', 'IT': 'Italy', 'LV': 'Latvia',
+    'LT': 'Lithuania', 'LU': 'Luxembourg', 'MT': 'Malta', 'NL': 'Netherlands',
+    'PL': 'Poland', 'PT': 'Portugal', 'RO': 'Romania', 'SK': 'Slovakia',
+    'SI': 'Slovenia', 'ES': 'Spain', 'SE': 'Sweden',
     
     # Europa (non-UE)
-    'ad': 'Andorra', 'al': 'Albania', 'am': 'Armenia', 'az': 'Azerbaijan',
-    'ba': 'Bosnia and Herzegovina', 'by': 'Belarus', 'ch': 'Switzerland',
-    'fo': 'Faroe Islands', 'ge': 'Georgia', 'gb': 'United Kingdom', 
-    'gi': 'Gibraltar', 'gl': 'Greenland', 'is': 'Iceland', 'im': 'Isle of Man',
-    'je': 'Jersey', 'li': 'Liechtenstein', 'mc': 'Monaco', 'md': 'Moldova',
-    'me': 'Montenegro', 'mk': 'North Macedonia', 'no': 'Norway', 'rs': 'Serbia',
-    'ru': 'Russia', 'sm': 'San Marino', 'tr': 'Turkey', 'ua': 'Ukraine',
-    'va': 'Vatican City', 'xk': 'Kosovo', 'yu': 'Yugoslavia',
+    'AD': 'Andorra', 'AL': 'Albania', 'AM': 'Armenia', 'AZ': 'Azerbaijan',
+    'BA': 'Bosnia and Herzegovina', 'BY': 'Belarus', 'CH': 'Switzerland',
+    'FO': 'Faroe Islands', 'GE': 'Georgia', 'GB': 'United Kingdom', 
+    'GI': 'Gibraltar', 'GL': 'Greenland', 'IS': 'Iceland', 'IM': 'Isle of Man',
+    'JE': 'Jersey', 'LI': 'Liechtenstein', 'MC': 'Monaco', 'MD': 'Moldova',
+    'ME': 'Montenegro', 'MK': 'North Macedonia', 'NO': 'Norway', 'RS': 'Serbia',
+    'RU': 'Russia', 'SM': 'San Marino', 'TR': 'Turkey', 'UA': 'Ukraine',
+    'VA': 'Vatican City', 'XK': 'Kosovo', 'YU': 'Yugoslavia',
     
     # Africa
-    'ao': 'Angola', 'bf': 'Burkina Faso', 'bi': 'Burundi', 'bj': 'Benin',
-    'bw': 'Botswana', 'cd': 'Congo (DRC)', 'cf': 'Central African Republic',
-    'cg': 'Congo', 'ci': "Côte d'Ivoire", 'cm': 'Cameroon', 'cv': 'Cape Verde',
-    'dj': 'Djibouti', 'dz': 'Algeria', 'eg': 'Egypt', 'et': 'Ethiopia',
-    'ga': 'Gabon', 'gh': 'Ghana', 'gm': 'Gambia', 'gn': 'Guinea',
-    'gq': 'Equatorial Guinea', 'gw': 'Guinea-Bissau', 'ke': 'Kenya',
-    'lr': 'Liberia', 'ls': 'Lesotho', 'ly': 'Libya', 'ma': 'Morocco',
-    'mg': 'Madagascar', 'ml': 'Mali', 'mr': 'Mauritania', 'mu': 'Mauritius',
-    'mw': 'Malawi', 'mz': 'Mozambique', 'na': 'Namibia', 'ne': 'Niger',
-    'ng': 'Nigeria', 'rw': 'Rwanda', 'sc': 'Seychelles', 'sd': 'Sudan',
-    'sl': 'Sierra Leone', 'sn': 'Senegal', 'so': 'Somalia', 'st': 'São Tomé and Príncipe',
-    'sz': 'Eswatini', 'td': 'Chad', 'tg': 'Togo', 'tn': 'Tunisia',
-    'tz': 'Tanzania', 'ug': 'Uganda', 'za': 'South Africa', 'zm': 'Zambia',
-    'zw': 'Zimbabwe',
+    'AO': 'Angola', 'BF': 'Burkina Faso', 'BI': 'Burundi', 'BJ': 'Benin',
+    'BW': 'Botswana', 'CD': 'Congo (DRC)', 'CF': 'Central African Republic',
+    'CG': 'Congo', 'CI': "Côte d'Ivoire", 'CM': 'Cameroon', 'CV': 'Cape Verde',
+    'DJ': 'Djibouti', 'DZ': 'Algeria', 'EG': 'Egypt', 'ET': 'Ethiopia',
+    'GA': 'Gabon', 'GH': 'Ghana', 'GM': 'Gambia', 'GN': 'Guinea',
+    'GQ': 'Equatorial Guinea', 'GW': 'Guinea-Bissau', 'KE': 'Kenya',
+    'LR': 'Liberia', 'LS': 'Lesotho', 'LY': 'Libya', 'MA': 'Morocco',
+    'MG': 'Madagascar', 'ML': 'Mali', 'MR': 'Mauritania', 'MU': 'Mauritius',
+    'MW': 'Malawi', 'MZ': 'Mozambique', 'NA': 'Namibia', 'NE': 'Niger',
+    'NG': 'Nigeria', 'RW': 'Rwanda', 'SC': 'Seychelles', 'SD': 'Sudan',
+    'SL': 'Sierra Leone', 'SN': 'Senegal', 'SO': 'Somalia', 'ST': 'São Tomé and Príncipe',
+    'SZ': 'Eswatini', 'TD': 'Chad', 'TG': 'Togo', 'TN': 'Tunisia',
+    'TZ': 'Tanzania', 'UG': 'Uganda', 'ZA': 'South Africa', 'ZM': 'Zambia',
+    'ZW': 'Zimbabwe',
     
     # Asia
-    'ae': 'United Arab Emirates', 'af': 'Afghanistan', 'bd': 'Bangladesh',
-    'bh': 'Bahrain', 'bn': 'Brunei', 'bt': 'Bhutan', 'cn': 'China',
-    'hk': 'Hong Kong', 'id': 'Indonesia', 'il': 'Israel', 'in': 'India',
-    'iq': 'Iraq', 'ir': 'Iran', 'jo': 'Jordan', 'jp': 'Japan',
-    'kg': 'Kyrgyzstan', 'kh': 'Cambodia', 'kr': 'South Korea', 'kw': 'Kuwait',
-    'kz': 'Kazakhstan', 'la': 'Laos', 'lb': 'Lebanon', 'lk': 'Sri Lanka',
-    'mm': 'Myanmar', 'mn': 'Mongolia', 'mo': 'Macau', 'mv': 'Maldives',
-    'my': 'Malaysia', 'np': 'Nepal', 'om': 'Oman', 'pk': 'Pakistan',
-    'ph': 'Philippines', 'ps': 'Palestine', 'qa': 'Qatar', 'sa': 'Saudi Arabia',
-    'sg': 'Singapore', 'sy': 'Syria', 'th': 'Thailand', 'tj': 'Tajikistan',
-    'tm': 'Turkmenistan', 'tw': 'Taiwan', 'uz': 'Uzbekistan', 'vn': 'Vietnam',
-    'ye': 'Yemen',
+    'AE': 'United Arab Emirates', 'AF': 'Afghanistan', 'BD': 'Bangladesh',
+    'BH': 'Bahrain', 'BN': 'Brunei', 'BT': 'Bhutan', 'CN': 'China',
+    'HK': 'Hong Kong', 'ID': 'Indonesia', 'IL': 'Israel', 'IN': 'India',
+    'IQ': 'Iraq', 'IR': 'Iran', 'JO': 'Jordan', 'JP': 'Japan',
+    'KG': 'Kyrgyzstan', 'KH': 'Cambodia', 'KR': 'South Korea', 'KW': 'Kuwait',
+    'KZ': 'Kazakhstan', 'LA': 'Laos', 'LB': 'Lebanon', 'LK': 'Sri Lanka',
+    'MM': 'Myanmar', 'MN': 'Mongolia', 'MO': 'Macau', 'MV': 'Maldives',
+    'MY': 'Malaysia', 'NP': 'Nepal', 'OM': 'Oman', 'PK': 'Pakistan',
+    'PH': 'Philippines', 'PS': 'Palestine', 'QA': 'Qatar', 'SA': 'Saudi Arabia',
+    'SG': 'Singapore', 'SY': 'Syria', 'TH': 'Thailand', 'TJ': 'Tajikistan',
+    'TM': 'Turkmenistan', 'TW': 'Taiwan', 'UZ': 'Uzbekistan', 'VN': 'Vietnam',
+    'YE': 'Yemen',
     
     # Americas
-    'ar': 'Argentina', 'aw': 'Aruba', 'bb': 'Barbados', 'bq': 'Bonaire',
-    'br': 'Brazil', 'bz': 'Belize', 'ca': 'Canada', 'cl': 'Chile',
-    'co': 'Colombia', 'cr': 'Costa Rica', 'cu': 'Cuba', 'do': 'Dominican Republic',
-    'ec': 'Ecuador', 'fk': 'Falkland Islands', 'gd': 'Grenada', 'gt': 'Guatemala',
-    'gu': 'Guam', 'hn': 'Honduras', 'ht': 'Haiti', 'jm': 'Jamaica',
-    'ky': 'Cayman Islands', 'lc': 'Saint Lucia', 'mx': 'Mexico', 'ni': 'Nicaragua',
-    'pa': 'Panama', 'pe': 'Peru', 'py': 'Paraguay', 'sr': 'Suriname',
-    'sv': 'El Salvador', 'sx': 'Sint Maarten', 'tt': 'Trinidad and Tobago',
-    'um': 'U.S. Minor Outlying Islands', 'us': 'United States', 'uy': 'Uruguay',
-    've': 'Venezuela', 'vg': 'British Virgin Islands',
+    'AR': 'Argentina', 'AW': 'Aruba', 'BB': 'Barbados', 'BQ': 'Bonaire',
+    'BR': 'Brazil', 'BZ': 'Belize', 'CA': 'Canada', 'CL': 'Chile',
+    'CO': 'Colombia', 'CR': 'Costa Rica', 'CU': 'Cuba', 'DO': 'Dominican Republic',
+    'EC': 'Ecuador', 'FK': 'Falkland Islands', 'GD': 'Grenada', 'GT': 'Guatemala',
+    'GU': 'Guam', 'HN': 'Honduras', 'HT': 'Haiti', 'JM': 'Jamaica',
+    'KY': 'Cayman Islands', 'LC': 'Saint Lucia', 'MX': 'Mexico', 'NI': 'Nicaragua',
+    'PA': 'Panama', 'PE': 'Peru', 'PY': 'Paraguay', 'SR': 'Suriname',
+    'SV': 'El Salvador', 'SX': 'Sint Maarten', 'TT': 'Trinidad and Tobago',
+    'UM': 'U.S. Minor Outlying Islands', 'US': 'United States', 'UY': 'Uruguay',
+    'VE': 'Venezuela', 'VG': 'British Virgin Islands',
     
     # Oceania
-    'au': 'Australia', 'fj': 'Fiji', 'mh': 'Marshall Islands', 'mp': 'Northern Mariana Islands',
-    'nc': 'New Caledonia', 'nf': 'Norfolk Island', 'nu': 'Niue', 'nz': 'New Zealand',
-    'pf': 'French Polynesia', 'pg': 'Papua New Guinea', 'sb': 'Solomon Islands',
-    'vu': 'Vanuatu', 'wf': 'Wallis and Futuna', 'ws': 'Samoa',
+    'AU': 'Australia', 'FJ': 'Fiji', 'MH': 'Marshall Islands', 'MP': 'Northern Mariana Islands',
+    'NC': 'New Caledonia', 'NF': 'Norfolk Island', 'NU': 'Niue', 'NZ': 'New Zealand',
+    'PF': 'French Polynesia', 'PG': 'Papua New Guinea', 'SB': 'Solomon Islands',
+    'VU': 'Vanuatu', 'WF': 'Wallis and Futuna', 'WS': 'Samoa',
     
 }
 
 # Lista codici UE (per l'opzione EU)
 EU_COUNTRY_CODES = [
-    'at', 'be', 'bg', 'hr', 'cy', 'cz', 'dk', 'ee', 'fi', 'fr', 
-    'de', 'gr', 'hu', 'ie', 'it', 'lv', 'lt', 'lu', 'mt', 'nl', 
-    'pl', 'pt', 'ro', 'sk', 'si', 'es', 'se'
+    'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 
+    'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 
+    'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'
 ]

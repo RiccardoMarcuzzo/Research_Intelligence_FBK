@@ -71,7 +71,7 @@ def generate_treemap():
 
 def populate_doc_canvas(proj_id):
 
-    row = projects_df[projects_df['id'] == proj_id].iloc[0]
+    row = projects_df[projects_df['projectID'] == proj_id].iloc[0]
     title = row['title']
 
     return html.Div([

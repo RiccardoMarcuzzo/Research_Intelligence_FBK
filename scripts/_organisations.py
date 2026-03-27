@@ -19,12 +19,12 @@ def update_dropdown(search_value):
 
 def populate_kpis(org_df):
     
-    tot_proj = str(org_df['projIds'].explode().nunique())
+    tot_proj = str(org_df['projectIDs'].explode().nunique())
 
     eur = org_df['netEcContribution'].sum()
     tot_eur = f'{round(eur / 1_000_000, 1)} M'
 
-    tot_publ = str(org_df['scopus_id'].explode().nunique())
+    tot_publ = str(org_df['scopusID'].explode().nunique())
 
     tot_tops = str(org_df['topic_name'].nunique())
 
@@ -41,8 +41,8 @@ def compare_organisations(org1_docs, org2_docs):
     org2_docs = pd.DataFrame(org2_docs)
     
     merged_docs = pd.concat([org1_docs, org2_docs], ignore_index=True)
-    common_rcns = merged_docs['id'][merged_docs['id'].duplicated()].unique()
-    common_projects = merged_docs[merged_docs['id'].isin(common_rcns)].drop_duplicates(subset='id')
+    common_rcns = merged_docs['projectID'][merged_docs['projectID'].duplicated()].unique()
+    common_projects = merged_docs[merged_docs['projectID'].isin(common_rcns)].drop_duplicates(subset='projectID')
 
     if common_projects.empty:
         return html.P(
@@ -84,7 +84,7 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
 
     row = row.iloc[0]
     filtered_projects = (
-        projects_df[projects_df['id'].isin(row['projectIDs'])]
+        projects_df[projects_df['projectID'].isin(row['projectIDs'])]
         .copy()
         .pipe(lambda df: df[df['fp'].isin(fp_list)])
     )
@@ -189,7 +189,7 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
 
     # STEP 6: Header organization
     info_elements = []
-    country_code = row.get('country_code_ok')
+    country_code = row.get('country_code')
     if pd.notna(country_code):
         flag = chr(ord(country_code[0].upper()) + 127397) + chr(ord(country_code[1].upper()) + 127397)
         info_elements.append(html.P(f"{flag} {country_code}", style={'marginRight': '15px'}))
@@ -259,9 +259,9 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
     return content_layout, filtered_projects.to_dict('records'), proj_filtered.to_json(orient='split'), tot_proj, tot_eur, tot_publ, tot_tops
 
 def polish_df(df: pd.DataFrame, org_name):
-    df = df.drop(columns=['topic_name_hierarchy', 'scopus_id', 'n_proj', 'n_publ', 'role'])
-    df = df.explode('projIds').reset_index(drop=True)
-    df = df.rename(columns={'projIds': 'projectID', 'name': 'org_name'})
+    df = df.drop(columns=['topic_name_hierarchy', 'scopusID', 'n_proj', 'n_publ', 'role'])
+    df = df.explode('projectIDs').reset_index(drop=True)
+    df = df.rename(columns={'projectIDs': 'projectID', 'name': 'org_name'})
     df = df.drop_duplicates(subset=['organisationID', 'projectID']).reset_index(drop=True)
 
     return df
