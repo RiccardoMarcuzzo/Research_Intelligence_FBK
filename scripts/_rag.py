@@ -1,13 +1,16 @@
 import torch
 import re
-from google import genai
-from google.api_core.exceptions import ServerError, ServiceUnavailable
+#from google import genai #TODO: de-comment
+#from google.api_core.exceptions import ServerError, ServiceUnavailable #TODO: de-comment
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from dash import html
 
 from utils import projects_df, RAG_TOKENIZER, RAG_MODEL, RAG_EMBS, GOOGLE_API
 
+# TODO: de-comment
+
+'''
 client = genai.Client(api_key=GOOGLE_API)
 GEMINI_MODEL = 'gemini-2.5-flash'
 
@@ -259,6 +262,6 @@ def create_project_block(row, citation_number=None):
             html.P(row['objective'], style={'fontSize': '14px', 'lineHeight': '1.5'})
         ], style={'padding': '10px', 'borderLeft': '2px solid #007BFF', 'marginLeft': '10px'})
     ], style={'marginBottom': '15px'})
-
+'''
 
 
