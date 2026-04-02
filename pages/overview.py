@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 import scripts._overview as script
 
 from dash import dcc, html, Input, Output, State, ctx, callback, clientside_callback
-from utils import TITLE
+from utils import TITLE, base_path
 
 PAGE_TITLE = "Overview"
 
@@ -210,7 +210,7 @@ layout = html.Div([
                     html.Div([
                         dcc.Link(
                             dbc.Button("Explore Topics →", color="success", className="w-100 mt-3"),
-                            href="/"
+                            href=base_path
                         )
                     ])
                 ])
@@ -270,7 +270,7 @@ layout = html.Div([
                     html.Div([
                         dcc.Link(
                             dbc.Button("Explore Organisations →", color="primary", className="w-100 mt-3"),
-                            href="/organisations"
+                            href="organisations"
                         )
                     ])
                 ])
@@ -296,7 +296,7 @@ layout = html.Div([
                     html.Div([
                         dcc.Link(
                             dbc.Button("Try Ask AI →", color="danger", className="w-100 mt-3"),
-                            href="/rag"
+                            href="askAI"
                         )
                     ])
                 ])

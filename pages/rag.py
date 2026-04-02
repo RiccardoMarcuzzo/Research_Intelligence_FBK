@@ -186,7 +186,7 @@ layout = dbc.Container(
                                 dcc.Link([
                                     'documentation.',
                                     html.I(className="bi bi-box-arrow-up-right ms-2")
-                                ], href='overview', className='text-decoration-none link-danger')
+                                ], href='concept', className='text-decoration-none link-danger')
                             ]),
                             ]),
                             className='border shadow rounded-3 mt-3',
