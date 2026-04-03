@@ -19,7 +19,7 @@ dash.register_page(
 # LAYOUT      
 #--------------------------------------------
 layout = html.Div([
-    html.H1("Ex-CORDIS: Exploring CORDIS from its core", className="fw-bold mb-3 mt-4",),
+    html.H1("Exploring CORDIS from its core", className="fw-bold mb-3 mt-4",),
     # TOP HOMEPAGE
     html.P(
         ["CORDIS is the EU's platform for accessing and analysing data on funded research. "
@@ -363,7 +363,7 @@ layout = html.Div([
         ], className="justify-content-center mt-5"),
 
         html.P(
-            "Please feel free to contact us for anything concerning Ex-CORDIS: Research Intelligence Tool.",
+            "Please feel free to contact us for anything concerning FBK Research Intelligence Tool.",
             className="text-muted text-center mt-5 italic",
             style={'fontSize': '0.95rem', 'opacity': '0.7'}
         )
