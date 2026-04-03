@@ -185,6 +185,24 @@ app.clientside_callback(
     prevent_initial_call=True,
 )
 
+app.clientside_callback(
+    """
+    function(pathname) {
+        setTimeout(function() {
+            const hash = window.location.hash;
+            if (hash) {
+                const el = document.querySelector(hash);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 300);
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output("taxonomy-section", "id"),
+    Input("url", "pathname"),
+    prevent_initial_call=False,
+)
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=PORT, host="0.0.0.0")

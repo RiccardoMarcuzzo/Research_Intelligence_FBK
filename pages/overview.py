@@ -178,7 +178,8 @@ layout = html.Div([
                 width=7
             ),
         ],
-        className="mb-5"
+        className="mb-5",
+        id="taxonomy-section"
     ),
     
     # EXPLORE SECTIONS

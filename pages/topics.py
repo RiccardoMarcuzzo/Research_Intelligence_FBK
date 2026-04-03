@@ -3,7 +3,7 @@ from datetime import datetime
 import dash_bootstrap_components as dbc
 import scripts._topics as script
 from dash import html, dcc, Input, Output, State, callback
-from utils import TITLE, COUNTRY_CODES, labels_pkl
+from utils import TITLE, COUNTRY_CODES, labels_pkl, base_path
 
 PAGE_TITLE = "Topics"
 
@@ -188,8 +188,12 @@ layout = dbc.Container(
                             # DIVIDER + HINT
                             html.Hr(className="my-2"),
                             html.P(
-                                "Not sure what to search? Try typing a definition or description "
-                                "and find the most similar topics in our taxonomy.",
+                                [
+                                    "Not sure what to search? Try typing a definition or description "
+                                    "and find the most similar topics in our ",
+                                    html.A("taxonomy", href=f"{base_path}concept#taxonomy-section"),
+                                    "."
+                                ],
                                 className="text-muted fst-italic mb-2",
                                 style={'fontSize': '0.85rem'}
                             ),
