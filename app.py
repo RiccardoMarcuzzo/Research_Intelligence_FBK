@@ -58,9 +58,9 @@ navbar = html.Div([
         html.Div([
             html.Img(src=FBK_LOGO, height="34px"),
             html.Span([
-                "Ex-CORDIS",
+                "RESEARCH INTELLIGENCE",
                 html.Span(
-                    ": research intelligence tool",
+                    "TOOL",
                     className="navbar-subtitle",
                     style={"fontWeight": "400", "opacity": "0.8",
                            "fontSize": "28px", "marginLeft": "12px"},

@@ -7,7 +7,7 @@ import argparse
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForFeatureExtraction
 
-TITLE = 'Ex-CORDIS'
+TITLE = 'RESEARCH INTELLIGENCE'
 GOOGLE_API = 'non_disponibile' #TODO: TO-REMOVE-ASKAI-RAG
 
 # Configurazione CLI 
