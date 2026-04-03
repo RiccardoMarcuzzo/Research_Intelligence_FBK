@@ -451,5 +451,3 @@ def show_doc_details(message_data):
     proj_id = message_data.get('id')
     
     return script.populate_doc_canvas(int(proj_id))
-
-    
