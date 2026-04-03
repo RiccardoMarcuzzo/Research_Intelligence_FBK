@@ -187,7 +187,6 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
     fig.update_layout(
         title=f"Top {n_orgs} Players in <b>{selected_topic}</b>",
         xaxis_title=x_label,
-        yaxis_title='Organisation',
         dragmode='pan',
         height=500 if is_1 else 350,
         margin=dict(l=20, r=20, t=60, b=40),
