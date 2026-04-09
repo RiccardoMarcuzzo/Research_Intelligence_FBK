@@ -241,7 +241,7 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
                 html.Div([
                     html.A(
                         [f'• {proj.title}', html.I(className="bi bi-box-arrow-up-right ms-2")],
-                        href=f'https://www.google.com/search?q=CORDIS%20{proj.title}',
+                        href=f'https://cordis.europa.eu/project/id/{proj.projectID}',
                         target='_blank', rel='noopener noreferrer',
                         style={'textDecoration': 'none', 'display': 'block',
                                'marginBottom': '8px', 'color': '#007BFF'}
