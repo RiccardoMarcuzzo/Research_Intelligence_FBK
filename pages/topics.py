@@ -25,7 +25,7 @@ layout = dbc.Container(
     [
         dbc.Row(
             [
-                # === COLONNA SINISTRA: topic card ===
+                # === COLONNA SINISTRA+CENTRALE: topic card + comparison ===
                 dbc.Col(
                     [
                         # KPI CARDS
@@ -80,94 +80,90 @@ layout = dbc.Container(
                         ),
 
                         # SLIDE BAR
-                        dcc.Slider(10,50,5, value=20, id='slider-orgs', className='mt-2'),
+                        dcc.Slider(10, 50, 5, value=20, id='slider-orgs', className='mt-2'),
 
                         # TOPIC CARD
                         html.Div(id='topic-card-container', className='mt-2'),
+
+                        # --- COMPARISON (ex colonna centrale) ---
+                        dbc.Card(
+                            dbc.CardBody([
+
+                                # SEARCH
+                                html.Label(
+                                    "Compare with a different topic",
+                                    className="form-label fw-semibold mb-2",
+                                    style={'fontSize': '0.95rem'}
+                                ),
+                                dcc.Dropdown(
+                                    id='topic2-dropdown',
+                                    options=topic_names,
+                                    value=COMPARISON_TOPIC,
+                                    placeholder='Start typing to search...',
+                                    searchable=True,
+                                    className='mb-3'
+                                ),
+
+                                # KPI CARDS
+                                dbc.Row([
+                                    dbc.Col(
+                                        dbc.Card(
+                                            dbc.CardBody([
+                                                html.H5(id='tot-proj-2', className="fw-bold mb-1"),
+                                                html.P("Projects", className="text-muted mb-0",
+                                                    style={'fontSize': '0.8rem'}),
+                                            ], className="px-3 py-2"),
+                                            className='border-0 shadow rounded-3',
+                                            style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
+                                        ),
+                                    ),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            dbc.CardBody([
+                                                html.H5(id='tot-eur-2', className="fw-bold mb-1"),
+                                                html.P("Funding", className="text-muted mb-0",
+                                                    style={'fontSize': '0.8rem'}),
+                                            ], className="px-3 py-2"),
+                                            className='border-0 shadow rounded-3',
+                                            style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
+                                        ),
+                                    ),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            dbc.CardBody([
+                                                html.H5(id='tot-publ-2', className="fw-bold mb-1"),
+                                                html.P("Publications", className="text-muted mb-0",
+                                                    style={'fontSize': '0.8rem'}),
+                                            ], className="px-3 py-2"),
+                                            className='border-0 shadow rounded-3',
+                                            style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
+                                        ),
+                                    ),
+                                    dbc.Col(
+                                        dbc.Card(
+                                            dbc.CardBody([
+                                                html.H5(id='tot-org-2', className="fw-bold mb-1"),
+                                                html.P("Organisations", className="text-muted mb-0",
+                                                    style={'fontSize': '0.8rem'}),
+                                            ], className="px-3 py-2"),
+                                            className='border-0 shadow rounded-3',
+                                            style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
+                                        ),
+                                    ),
+                                ], className="g-2 mb-2 mt-3"),
+
+                                # TOPIC CARD
+                                html.Div(id='topic2-card-container', className='mt-2'),
+
+                                # TOPIC COLLABORATION
+                                html.H5('Intersecting organisations', className='mt-3'),
+                                html.Div(id='topics-collaborations', className='mt-2')
+                            ]),
+                            className='border-0 shadow-sm rounded-3 mt-3',
+                            style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
+                        ),
                     ],
-                    width=5,
-                ),
-
-                # === COLONNA CENTRALE: comparison ===
-                dbc.Col(
-                    dbc.Card(
-                        dbc.CardBody([
-                            
-                            # SEARCH
-                            html.Label(
-                                "Compare with a different topic",
-                                className="form-label fw-semibold mb-2",
-                                style={'fontSize': '0.95rem'}
-                            ),
-                            dcc.Dropdown(
-                                id='topic2-dropdown',
-                                options=topic_names,
-                                value=COMPARISON_TOPIC,
-                                placeholder='Start typing to search...',
-                                searchable=True,
-                                className='mb-3'
-                            ),
-
-                            # KPI CARDS
-                            dbc.Row([
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.CardBody([
-                                            html.H5(id='tot-proj-2', className="fw-bold mb-1"),
-                                            html.P("Projects", className="text-muted mb-0",
-                                                style={'fontSize': '0.8rem'}),
-                                        ], className="px-3 py-2"),
-                                        className='border-0 shadow rounded-3',
-                                        style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
-                                    ),
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.CardBody([
-                                            html.H5(id='tot-eur-2', className="fw-bold mb-1"),
-                                            html.P("Funding", className="text-muted mb-0",
-                                                style={'fontSize': '0.8rem'}),
-                                        ], className="px-3 py-2"),
-                                        className='border-0 shadow rounded-3',
-                                        style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
-                                    ),
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.CardBody([
-                                            html.H5(id='tot-publ-2', className="fw-bold mb-1"),
-                                            html.P("Publications", className="text-muted mb-0",
-                                                style={'fontSize': '0.8rem'}),
-                                        ], className="px-3 py-2"),
-                                        className='border-0 shadow rounded-3',
-                                        style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
-                                    ),
-                                ),
-                                dbc.Col(
-                                    dbc.Card(
-                                        dbc.CardBody([
-                                            html.H5(id='tot-org-2', className="fw-bold mb-1"),
-                                            html.P("Organisations", className="text-muted mb-0",
-                                                style={'fontSize': '0.8rem'}),
-                                        ], className="px-3 py-2"),
-                                        className='border-0 shadow rounded-3',
-                                        style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
-                                    ),
-                                ),
-                            ], className="g-2 mb-2 mt-3"),
-
-                            # TOPIC CARD
-                            html.Div(id='topic2-card-container', className='mt-2'),
-
-                            # TOPIC COLLABORATION
-                            html.H5('Intersecting organisations', className='mt-3'),
-                            html.Div(id='topics-collaborations', className='mt-2')
-                        ]),
-
-                        className='border-0 shadow-sm rounded-3',
-                        style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
-                    ),
-                    width=4,
+                    width=9,
                 ),
 
                 # === COLONNA DESTRA: search + suggest + filters ===
@@ -292,22 +288,22 @@ layout = dbc.Container(
                         className='border-0 shadow rounded-3',
                         style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
                     ),
-                    
+
                     # DETAILS & INFO
                     dbc.Card(
                         dbc.CardBody([
-                        html.P([
-                            "Looking for more details about this tool? See the ",
-                            dcc.Link([
-                                'documentation.',
-                                html.I(className="bi bi-box-arrow-up-right ms-2")
-                            ], href='concept', className='text-decoration-none link-success')
-                        ]),
-                        html.P([
-                            "Do you want to export this page?",
-                        ]),
-                        dbc.Col([
-                            dbc.Button(
+                            html.P([
+                                "Looking for more details about this tool? See the ",
+                                dcc.Link([
+                                    'documentation.',
+                                    html.I(className="bi bi-box-arrow-up-right ms-2")
+                                ], href='concept', className='text-decoration-none link-success')
+                            ]),
+                            html.P([
+                                "Do you want to export this page?",
+                            ]),
+                            dbc.Col([
+                                dbc.Button(
                                     "Download CSV",
                                     id='download-topics-csv-btn',
                                     size="sm",
@@ -315,7 +311,7 @@ layout = dbc.Container(
                                     className="w-100",
                                     color="success"
                                 ),
-                            dcc.Download(id='download-topics-csv')
+                                dcc.Download(id='download-topics-csv')
                             ])
                         ]),
                         className='border shadow rounded-3 mt-3',

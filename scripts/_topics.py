@@ -158,24 +158,18 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
         org_stats.rename(columns={'netEcContribution': 'value'}, inplace=True)
         top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
 
-    else:
+    else: # metric == 'n_publ'
         x_label = 'Number of publications'
         
         org_stats = org_stats.drop(columns=['n_proj', 'netEcContribution'])
         org_stats.rename(columns={'n_publ': 'value'}, inplace=True)
         top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
-
-    top_10['org_reduced'] = np.where(
-        top_10['name'].str.len() > 20,
-        top_10['name'].str.slice(0, 20) + '...',
-        top_10['name']
-    )
-    
+       
     # STEP 7: Crea il grafico
     fig = go.Figure(data=[
         go.Bar(
             x=top_10['value'],
-            y=top_10['org_reduced'],
+            y=top_10['name'],
             orientation='h',
             marker=dict(
                 color=top_10['value'],
@@ -191,7 +185,7 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
         title=f"Top {n_orgs} Players in <b>{selected_topic}</b>",
         xaxis_title=x_label,
         dragmode='pan',
-        height=500 if is_1 else 350,
+        height=40*len(top_10) if is_1 else 30*len(top_10),
         margin=dict(l=20, r=20, t=60, b=40),
         hovermode='closest',
     )
@@ -211,48 +205,45 @@ def join_topics(topics1_orgs, topics2_orgs, metric, n_orgs):
         topics2_orgs[topics2_orgs['name'].isin(common_names)]
     ])
     
-    if metric == 'n_progetti':
-        org_stats = proj_filtered.groupby('name')['n_proj'].sum().reset_index()
-        org_stats.columns = ['org', 'value']
-        x_label = 'Number of projects'
-        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
-        top_10['custom_hover'] = (
-            '<b>' + top_10['org'] + '</b><br><i>' +
-            top_10['value'].astype(str) + ' projects</i>' +
-            '<extra></extra>'
-        )
-    elif metric == 'euro_finanziamenti': 
-        org_stats = proj_filtered.groupby('name')['netEcContribution'].sum().reset_index()
-        org_stats.columns = ['org', 'value']
-        x_label = 'Funding amount (€)'    
-        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
-        top_10['custom_hover'] = (
-            '<b>' + top_10['org'] + '</b><br><i>' +
-            top_10['value'].astype(str) + ' € funded</i>' +
-            '<extra></extra>'
-        )
-    else: # n_publ
-        org_stats = proj_filtered.groupby('name')['n_publ'].sum().reset_index()
-        org_stats.columns = ['org', 'value']
-        x_label = 'Number of publications'
-        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
-        top_10['custom_hover'] = (
-            '<b>' + top_10['org'] + '</b><br><i>' +
-            top_10['value'].astype(str) + ' publications</i>' +
-            '<extra></extra>'
-        )
+    org_stats = proj_filtered.groupby('name').agg({
+        'n_proj': 'sum',
+        'netEcContribution': 'sum',
+        'n_publ': 'sum'
+    }).reset_index()
+    org_stats['custom_hover'] = (
+        '<b>' + org_stats['name'] + '</b><br><i>' +
+        org_stats['n_proj'].astype(str) + ' projects<br>' +
+        org_stats['netEcContribution'].astype(str) + ' € funded<br>' +
+        org_stats['n_publ'].astype(str) + ' publications</i>' +
+        '<extra></extra>'
+    )   
 
-    top_10['org_reduced'] = np.where(
-        top_10['org'].str.len() > 20,
-        top_10['org'].str.slice(0, 20) + '...',
-        top_10['org']
-    )
-    
+    if metric == 'n_progetti':
+        x_label = 'Number of projects'
+        
+        org_stats = org_stats.drop(columns=['netEcContribution', 'n_publ'])
+        org_stats.rename(columns={'n_proj': 'value'}, inplace=True)
+        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
+
+    elif metric == 'euro_finanziamenti':
+        x_label = 'Funding amount (€)' 
+        
+        org_stats = org_stats.drop(columns=['n_proj', 'n_publ'])
+        org_stats.rename(columns={'netEcContribution': 'value'}, inplace=True)
+        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
+
+    else: # metric == 'n_publ'
+        x_label = 'Number of publications'
+        
+        org_stats = org_stats.drop(columns=['n_proj', 'netEcContribution'])
+        org_stats.rename(columns={'n_publ': 'value'}, inplace=True)
+        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
+   
     # STEP 7: Crea il grafico
     fig = go.Figure(data=[
         go.Bar(
             x=top_10['value'],
-            y=top_10['org_reduced'],
+            y=top_10['name'],
             orientation='h',
             marker=dict(
                 color=top_10['value'],
@@ -269,7 +260,7 @@ def join_topics(topics1_orgs, topics2_orgs, metric, n_orgs):
         xaxis_title=x_label,
         yaxis_title='Organisation',
         dragmode='pan',
-        height=350,
+        height=30*len(top_10),
         margin=dict(l=20, r=20, t=60, b=40),
         hovermode='closest',
     )
