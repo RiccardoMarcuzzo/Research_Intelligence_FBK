@@ -168,155 +168,160 @@ layout = dbc.Container(
 
                 # === COLONNA DESTRA: search + suggest + filters ===
                 dbc.Col([
-                    dbc.Card(
-                        dbc.CardBody([
+                    html.Div([
+                        dbc.Card(
+                            dbc.CardBody([
 
-                            # SEARCH
-                            dcc.Dropdown(
-                                id='topic-dropdown',
-                                options=topic_names,
-                                value=DEFAULT_TOPIC,
-                                placeholder='Start typing to search...',
-                                searchable=True,
-                                className='mb-3'
-                            ),
+                                # SEARCH
+                                dcc.Dropdown(
+                                    id='topic-dropdown',
+                                    options=topic_names,
+                                    value=DEFAULT_TOPIC,
+                                    placeholder='Start typing to search...',
+                                    searchable=True,
+                                    className='mb-3'
+                                ),
 
-                            # DIVIDER + HINT
-                            html.Hr(className="my-2"),
-                            html.P(
-                                [
-                                    "Not sure what to search? Try typing a definition or description "
-                                    "and find the most similar topics in our ",
-                                    html.A("taxonomy", href=f"{base_path}concept#taxonomy-section"),
-                                    "."
-                                ],
-                                className="text-muted fst-italic mb-2",
-                                style={'fontSize': '0.85rem'}
-                            ),
+                                # DIVIDER + HINT
+                                html.Hr(className="my-2"),
+                                html.P(
+                                    [
+                                        "Not sure what to search? Try typing a definition or description "
+                                        "and find the most similar topics in our ",
+                                        html.A("taxonomy", href=f"{base_path}concept#taxonomy-section"),
+                                        "."
+                                    ],
+                                    className="text-muted fst-italic mb-2",
+                                    style={'fontSize': '0.85rem'}
+                                ),
 
-                            # SUGGEST
-                            html.Div(
-                                id='suggest-container',
-                                children=[
-                                    dbc.Input(
-                                        id='suggest-input',
-                                        placeholder="Type...",
-                                        maxLength=140,
-                                        style={'minHeight': '40px'},
-                                        className='mb-2'
-                                    ),
-                                    html.Div([
+                                # SUGGEST
+                                html.Div(
+                                    id='suggest-container',
+                                    children=[
+                                        dbc.Input(
+                                            id='suggest-input',
+                                            placeholder="Type...",
+                                            maxLength=140,
+                                            style={'minHeight': '40px'},
+                                            className='mb-2'
+                                        ),
+                                        html.Div([
+                                            dbc.Button(
+                                                "Find",
+                                                id='submit-suggest-btn',
+                                                color="success",
+                                                size="sm",
+                                                className='me-2 d-inline-flex align-items-center'
+                                            ),
+                                            html.Span(id='suggested-topics-buttons', style={'overflowX': 'auto', 'whiteSpace': 'nowrap', 'display': 'inline-flex', 'alignItems': 'center'})
+                                        ], className='d-flex align-items-center')
+                                    ],
+                                ),
+
+                                html.Hr(className="my-3"),
+
+                                # FILTERS
+                                html.Div(
+                                    id='filters-container',
+                                    children=[
+                                        html.Div([
+                                            html.Label("Ranking metric", className="form-label fw-semibold mb-2",
+                                                    style={'fontSize': '0.9rem'}),
+                                            dbc.RadioItems(
+                                                id='metric-filter',
+                                                options=[
+                                                    {'label': 'Number of projects', 'value': 'n_progetti'},
+                                                    {'label': 'Funding amount', 'value': 'euro_finanziamenti'},
+                                                    {'label': 'Number of publications', 'value': 'n_publ'}
+                                                ],
+                                                value='n_progetti',
+                                                className='mb-3'
+                                            ),
+                                        ], className="mb-3"),
+
+                                        html.Div([
+                                            html.Label("Framework Programme", className="form-label fw-semibold mb-2",
+                                                    style={'fontSize': '0.9rem'}),
+                                            dcc.Dropdown(
+                                                id='fp-filter',
+                                                options=[
+                                                    {'label': 'Horizon 2020', 'value': 8},
+                                                    {'label': 'Horizon Europe', 'value': 9}
+                                                ],
+                                                value=[8, 9],
+                                                multi=True,
+                                                placeholder='Select Framework Programmes...',
+                                                className='mb-3'
+                                            ),
+                                        ], className="mb-3"),
+
+                                        html.Div([
+                                            html.Label("Country", className="form-label fw-semibold mb-2",
+                                                    style={'fontSize': '0.9rem'}),
+                                            dcc.Dropdown(
+                                                id='country-filter',
+                                                options=[
+                                                    {'label': '🇪🇺 European Union (27 countries)', 'value': 'EU'},
+                                                    {'label': '🌍 All World', 'value': 'ALL'},
+                                                    {'label': '─────────────────', 'value': 'separator', 'disabled': True},
+                                                ] + [
+                                                    {'label': f"{name} ({code.upper()})", 'value': code}
+                                                    for code, name in sorted(COUNTRY_CODES.items(), key=lambda x: x[1])
+                                                ],
+                                                value=['EU'],
+                                                multi=True,
+                                                placeholder='Select countries...',
+                                                className='mb-3'
+                                            ),
+                                        ], className="mb-3"),
+
                                         dbc.Button(
-                                            "Find",
-                                            id='submit-suggest-btn',
-                                            color="success",
+                                            "Reset Filters",
+                                            id='reset-filters-btn',
                                             size="sm",
-                                            className='me-2 d-inline-flex align-items-center'
-                                        ),
-                                        html.Span(id='suggested-topics-buttons', style={'overflowX': 'auto', 'whiteSpace': 'nowrap', 'display': 'inline-flex', 'alignItems': 'center'})
-                                    ], className='d-flex align-items-center')
-                                ],
-                            ),
+                                            className="w-100",
+                                            color="success"
+                                        )
+                                    ],
+                                ),
+                            ]),
+                            className='border-0 shadow rounded-3',
+                            style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
+                        ),
 
-                            html.Hr(className="my-3"),
-
-                            # FILTERS
-                            html.Div(
-                                id='filters-container',
-                                children=[
-                                    html.Div([
-                                        html.Label("Ranking metric", className="form-label fw-semibold mb-2",
-                                                style={'fontSize': '0.9rem'}),
-                                        dbc.RadioItems(
-                                            id='metric-filter',
-                                            options=[
-                                                {'label': 'Number of projects', 'value': 'n_progetti'},
-                                                {'label': 'Funding amount', 'value': 'euro_finanziamenti'},
-                                                {'label': 'Number of publications', 'value': 'n_publ'}
-                                            ],
-                                            value='n_progetti',
-                                            className='mb-3'
-                                        ),
-                                    ], className="mb-3"),
-
-                                    html.Div([
-                                        html.Label("Framework Programme", className="form-label fw-semibold mb-2",
-                                                style={'fontSize': '0.9rem'}),
-                                        dcc.Dropdown(
-                                            id='fp-filter',
-                                            options=[
-                                                {'label': 'Horizon 2020', 'value': 8},
-                                                {'label': 'Horizon Europe', 'value': 9}
-                                            ],
-                                            value=[8, 9],
-                                            multi=True,
-                                            placeholder='Select Framework Programmes...',
-                                            className='mb-3'
-                                        ),
-                                    ], className="mb-3"),
-
-                                    html.Div([
-                                        html.Label("Country", className="form-label fw-semibold mb-2",
-                                                style={'fontSize': '0.9rem'}),
-                                        dcc.Dropdown(
-                                            id='country-filter',
-                                            options=[
-                                                {'label': '🇪🇺 European Union (27 countries)', 'value': 'EU'},
-                                                {'label': '🌍 All World', 'value': 'ALL'},
-                                                {'label': '─────────────────', 'value': 'separator', 'disabled': True},
-                                            ] + [
-                                                {'label': f"{name} ({code.upper()})", 'value': code}
-                                                for code, name in sorted(COUNTRY_CODES.items(), key=lambda x: x[1])
-                                            ],
-                                            value=['EU'],
-                                            multi=True,
-                                            placeholder='Select countries...',
-                                            className='mb-3'
-                                        ),
-                                    ], className="mb-3"),
-
+                        # DETAILS & INFO
+                        dbc.Card(
+                            dbc.CardBody([
+                                html.P([
+                                    "Looking for more details about this tool? See the ",
+                                    dcc.Link([
+                                        'documentation.',
+                                        html.I(className="bi bi-box-arrow-up-right ms-2")
+                                    ], href='concept', className='text-decoration-none link-success')
+                                ]),
+                                html.P([
+                                    "Do you want to export this page?",
+                                ]),
+                                dbc.Col([
                                     dbc.Button(
-                                        "Reset Filters",
-                                        id='reset-filters-btn',
+                                        "Download CSV",
+                                        id='download-topics-csv-btn',
                                         size="sm",
+                                        outline=True,
                                         className="w-100",
                                         color="success"
-                                    )
-                                ],
-                            ),
-                        ]),
-                        className='border-0 shadow rounded-3',
-                        style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
-                    ),
-
-                    # DETAILS & INFO
-                    dbc.Card(
-                        dbc.CardBody([
-                            html.P([
-                                "Looking for more details about this tool? See the ",
-                                dcc.Link([
-                                    'documentation.',
-                                    html.I(className="bi bi-box-arrow-up-right ms-2")
-                                ], href='concept', className='text-decoration-none link-success')
+                                    ),
+                                    dcc.Download(id='download-topics-csv')
+                                ])
                             ]),
-                            html.P([
-                                "Do you want to export this page?",
-                            ]),
-                            dbc.Col([
-                                dbc.Button(
-                                    "Download CSV",
-                                    id='download-topics-csv-btn',
-                                    size="sm",
-                                    outline=True,
-                                    className="w-100",
-                                    color="success"
-                                ),
-                                dcc.Download(id='download-topics-csv')
-                            ])
-                        ]),
-                        className='border shadow rounded-3 mt-3',
-                        style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
-                    )],
+                            className='border shadow rounded-3 mt-3',
+                            style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
+                        )],
+                        style={
+                            'position': 'sticky',
+                            'top': '6rem',
+                    })],
                     width=3,
                 ),
             ],

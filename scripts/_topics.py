@@ -185,7 +185,7 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
         title=f"Top {n_orgs} Players in <b>{selected_topic}</b>",
         xaxis_title=x_label,
         dragmode='pan',
-        height=40*len(top_10) if is_1 else 30*len(top_10),
+        height=35*len(top_10) if is_1 else 30*len(top_10),
         margin=dict(l=20, r=20, t=60, b=40),
         hovermode='closest',
     )
