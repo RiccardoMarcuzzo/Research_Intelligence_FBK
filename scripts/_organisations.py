@@ -147,57 +147,35 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
         org_stats = org_stats.drop(columns=['n_proj', 'netEcContribution'])
         org_stats.rename(columns={'n_publ': 'value'}, inplace=True)
         
-    org_stats['topic_name_reduced'] = np.where(
-        org_stats['topic_name'].str.len() > 11,
-        org_stats['topic_name'].str.slice(0, 11) + '...',
-        org_stats['topic_name']
-    )
-
     palette = qualitative.Dark24
     org_stats['colors'] = [
         palette[i % len(palette)] for i in range(len(org_stats))
     ]
 
     # STEP 5: Crea il grafico
-    if len(org_stats) > 5:
-        fig = go.Figure(data=[
-            go.Bar(
-                x=org_stats['value'],
-                y=org_stats['topic_name_reduced'],
-                orientation='h',
-                hovertemplate=org_stats['custom_hover'],
-                marker=dict(
-                    color=org_stats['colors'],
-                    showscale=False,
-                    colorbar=dict(title=x_label)
-                )
-            )
-        ])
-
-        fig.update_layout(
-            xaxis_title=x_label,
-            yaxis_title='Organisation',
-            dragmode='pan',
-            height=400 if display_projects else 300,
-            margin=dict(l=20, r=20, t=60, b=40),
-            hovermode='closest',
-        )
-    else:
-        fig = go.Figure(go.Pie(
-            labels=org_stats['topic_name'],
-            values=org_stats['value'],
+    fig = go.Figure(data=[
+        go.Bar(
+            x=org_stats['value'],
+            y=org_stats['topic_name'],
+            orientation='h',
             hovertemplate=org_stats['custom_hover'],
-            marker=dict(colors=org_stats['colors'])
-        ))
+            marker=dict(
+                color=org_stats['colors'],
+                showscale=False,
+                colorbar=dict(title=x_label)
+            )
+        )
+    ])
 
     fig.update_layout(
         font_size=10,
         margin=dict(l=0, r=20, t=30, b=30),
         showlegend=False,
         dragmode='pan',
-        xaxis_title=None,
+        xaxis_title=x_label,
         yaxis_title=None,
-        height=400 if display_projects else 350
+        height=max(150, 30 * len(org_stats)) if len(org_stats) <= 10 else 20 * len(org_stats),
+        hovermode='closest'
     )
 
     # STEP 6: Header organization
