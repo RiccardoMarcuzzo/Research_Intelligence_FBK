@@ -114,26 +114,39 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
     proj_filtered['topic_name'] = proj_filtered['topic_name_hierarchy'].apply(
         lambda x: next((el for el in x if el != 'Unlabelled'), '')
     )
-    if metric == 'n_progetti':
-        org_stats = proj_filtered.groupby('topic_name')['n_proj'].sum().reset_index()
-        org_stats.columns = ['topic_name', 'value']
-        x_label = 'Number of projects'
-        hover_unit = 'projects'
-    elif metric == 'euro_finanziamenti':
-        org_stats = proj_filtered.groupby('topic_name')['netEcContribution'].sum().reset_index()
-        org_stats.columns = ['topic_name', 'value']
-        x_label = 'Funding amount (€)'
-        hover_unit = '€ funded'
-    else: # n_publ
-        org_stats = proj_filtered.groupby('topic_name')['n_publ'].sum().reset_index()
-        org_stats.columns = ['topic_name', 'value']
-        x_label = 'Number of publications'
-        hover_unit = 'publications'
+
+    org_stats = proj_filtered.groupby('topic_name').agg({
+        'n_proj': 'sum',
+        'netEcContribution': 'sum',
+        'n_publ': 'sum'
+    }).reset_index()
 
     org_stats['custom_hover'] = (
         '<b>' + org_stats['topic_name'] + '</b><br><i>' +
-        org_stats['value'].astype(str) + f' {hover_unit}</i><extra></extra>'
-    )
+        org_stats['n_proj'].astype(str) + ' projects<br>' +
+        org_stats['netEcContribution'].astype(str) + ' € funded<br>' +
+        org_stats['n_publ'].astype(str) + ' publications</i>' +
+        '<extra></extra>'
+    )   
+
+    if metric == 'n_progetti':
+        x_label = 'Number of projects'
+
+        org_stats = org_stats.drop(columns=['netEcContribution', 'n_publ'])
+        org_stats.rename(columns={'n_proj': 'value'}, inplace=True)        
+
+    elif metric == 'euro_finanziamenti':
+        x_label = 'Funding amount (€)'
+
+        org_stats = org_stats.drop(columns=['n_proj', 'n_publ'])
+        org_stats.rename(columns={'netEcContribution': 'value'}, inplace=True)        
+
+    else: # n_publ
+        x_label = 'Number of publications'
+
+        org_stats = org_stats.drop(columns=['n_proj', 'netEcContribution'])
+        org_stats.rename(columns={'n_publ': 'value'}, inplace=True)
+        
     org_stats['topic_name_reduced'] = np.where(
         org_stats['topic_name'].str.len() > 11,
         org_stats['topic_name'].str.slice(0, 11) + '...',

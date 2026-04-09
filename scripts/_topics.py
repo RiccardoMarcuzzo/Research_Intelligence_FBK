@@ -131,41 +131,44 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
         return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, 'N/A', 'N/A', 'N/A', 'N/A'
     
     # STEP 5: Aggrega per organizzazione secondo la metrica
-    if metric == 'n_progetti':
-        org_stats = proj_filtered.groupby('name')['n_proj'].sum().reset_index()
-        org_stats.columns = ['org', 'value']
-        x_label = 'Number of projects'
-        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
-        top_10['custom_hover'] = (
-            '<b>' + top_10['org'] + '</b><br><i>' +
-            top_10['value'].astype(str) + ' projects</i>' +
-            '<extra></extra>'
-        )
-    elif metric == 'euro_finanziamenti':
-        org_stats = proj_filtered.groupby('name')['netEcContribution'].sum().reset_index()
-        org_stats.columns = ['org', 'value']
-        x_label = 'Funding amount (€)'    
-        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
-        top_10['custom_hover'] = (
-            '<b>' + top_10['org'] + '</b><br><i>' +
-            top_10['value'].astype(str) + ' € funded</i>' +
-            '<extra></extra>'
-        )
-    else: # n_publ
-        org_stats = proj_filtered.groupby('name')['n_publ'].sum().reset_index()
-        org_stats.columns = ['org', 'value']
-        x_label = 'Number of publications'
-        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
-        top_10['custom_hover'] = (
-            '<b>' + top_10['org'] + '</b><br><i>' +
-            top_10['value'].astype(str) + ' publications</i>' +
-            '<extra></extra>'
-        )
+    org_stats = proj_filtered.groupby('name').agg({
+        'n_proj': 'sum',
+        'netEcContribution': 'sum',
+        'n_publ': 'sum'
+    }).reset_index()
+    org_stats['custom_hover'] = (
+        '<b>' + org_stats['name'] + '</b><br><i>' +
+        org_stats['n_proj'].astype(str) + ' projects<br>' +
+        org_stats['netEcContribution'].astype(str) + ' € funded<br>' +
+        org_stats['n_publ'].astype(str) + ' publications</i>' +
+        '<extra></extra>'
+    )   
     
+    if metric == 'n_progetti':
+        x_label = 'Number of projects'
+        
+        org_stats = org_stats.drop(columns=['netEcContribution', 'n_publ'])
+        org_stats.rename(columns={'n_proj': 'value'}, inplace=True)
+        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
+
+    elif metric == 'euro_finanziamenti':
+        x_label = 'Funding amount (€)' 
+        
+        org_stats = org_stats.drop(columns=['n_proj', 'n_publ'])
+        org_stats.rename(columns={'netEcContribution': 'value'}, inplace=True)
+        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
+
+    else:
+        x_label = 'Number of publications'
+        
+        org_stats = org_stats.drop(columns=['n_proj', 'netEcContribution'])
+        org_stats.rename(columns={'n_publ': 'value'}, inplace=True)
+        top_10 = org_stats.nlargest(n_orgs, 'value').sort_values('value', ascending=True)
+
     top_10['org_reduced'] = np.where(
-        top_10['org'].str.len() > 20,
-        top_10['org'].str.slice(0, 20) + '...',
-        top_10['org']
+        top_10['name'].str.len() > 20,
+        top_10['name'].str.slice(0, 20) + '...',
+        top_10['name']
     )
     
     # STEP 7: Crea il grafico
