@@ -303,16 +303,30 @@ layout = dbc.Container(
                                 html.P([
                                     "Do you want to export this page?",
                                 ]),
-                                dbc.Col([
-                                    dbc.Button(
-                                        "Download CSV",
-                                        id='download-topics-csv-btn',
-                                        size="sm",
-                                        outline=True,
-                                        className="w-100",
-                                        color="success"
-                                    ),
-                                    dcc.Download(id='download-topics-csv')
+                                dbc.Row([
+                                    dbc.Col([
+                                        dbc.Button(
+                                            "Download CSV",
+                                            id='download-topics-csv-btn',
+                                            size="sm",
+                                            outline=True,
+                                            className="w-100",
+                                            color="success"
+                                        ),
+                                        dcc.Download(id='download-topics-csv')
+                                    ]),
+
+                                    dbc.Col([
+                                        dbc.Button(
+                                            "Download JSON",
+                                            id='download-topics-json-btn',
+                                            size="sm",
+                                            outline=True,
+                                            className="w-100",
+                                            color="primary"
+                                        ),
+                                        dcc.Download(id='download-topics-json')
+                                    ])
                                 ])
                             ]),
                             className='border shadow rounded-3 mt-3',
@@ -488,3 +502,17 @@ def download_csv(n_clicks, top1, top2, name_top1, name_top2):
     df = script.download_file(top1, top2, name_top1, name_top2)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return dcc.send_data_frame(df.to_csv, f"{timestamp}.csv", index=False)
+
+@callback(
+    Output('download-topics-json', 'data'),
+    Input('download-topics-json-btn', 'n_clicks'),
+    State('topics-data', 'data'),
+    State('topics2-data', 'data'),
+    State('topic-dropdown', 'value'),
+    State('topic2-dropdown', 'value'),
+    prevent_initial_call=True
+)
+def download_json(n_clicks, top1, top2, name_top1, name_top2):
+    df = script.download_file(top1, top2, name_top1, name_top2)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    return dcc.send_data_frame(df.to_json, f"{timestamp}.json", index=False)

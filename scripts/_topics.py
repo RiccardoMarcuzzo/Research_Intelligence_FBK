@@ -268,7 +268,7 @@ def join_topics(topics1_orgs, topics2_orgs, metric, n_orgs):
     return [dcc.Graph(figure=fig, config={'scrollZoom': True})]
 
 def polish_df(df:pd.DataFrame, topic_name):
-    df = df.drop(columns=['topic_name_hierarchy', 'scopusID', 'n_proj', 'n_publ'])
+    df = df.drop(columns=['topic_name_hierarchy', 'n_proj', 'n_publ'])
     df['topic_name'] = topic_name
 
     df = df.explode('projectIDs').reset_index(drop=True)

@@ -243,27 +243,41 @@ layout = dbc.Container(
                         # INFO AND DOWNLOAD
                         dbc.Card(
                             dbc.CardBody([
-                            html.P([
-                                "Looking for more details about this tool? See the ",
-                                dcc.Link([
-                                    'documentation.',
-                                    html.I(className="bi bi-box-arrow-up-right ms-2")
-                                ], href='concept', className='text-decoration-none link-primary')
-                            ]),
-                            html.P([
-                                "Do you want to export this page?",
-                            ]),
-                            dbc.Col([
-                                dbc.Button(
-                                        "Download CSV",
-                                        id='download-orgs-csv-btn',
-                                        size="sm",
-                                        outline=True,
-                                        className="w-100",
-                                        color="primary"
-                                    ),
-                                dcc.Download(id='download-orgs-csv')
+                                html.P([
+                                    "Looking for more details about this tool? See the ",
+                                    dcc.Link([
+                                        'documentation.',
+                                        html.I(className="bi bi-box-arrow-up-right ms-2")
+                                    ], href='concept', className='text-decoration-none link-primary')
                                 ]),
+                                html.P([
+                                    "Do you want to export this page?",
+                                ]),
+                                dbc.Row([
+                                    dbc.Col([
+                                        dbc.Button(
+                                            "Download CSV",
+                                            id='download-orgs-csv-btn',
+                                            size="sm",
+                                            outline=True,
+                                            className="w-100",
+                                            color="success"
+                                        ),
+                                        dcc.Download(id='download-orgs-csv')
+                                    ]),
+
+                                    dbc.Col([
+                                        dbc.Button(
+                                            "Download JSON",
+                                            id='download-orgs-json-btn',
+                                            size="sm",
+                                            outline=True,
+                                            className="w-100",
+                                            color="primary"
+                                        ),
+                                        dcc.Download(id='download-orgs-json')
+                                    ])
+                                ])
                             ]),
                             className='border shadow rounded-3 mt-3',
                             style={'backgroundColor': 'rgba(255, 255, 255, 0.08)'}
@@ -271,7 +285,7 @@ layout = dbc.Container(
                         style={
                             'position': 'sticky',
                             'top': '6rem',
-                        })],
+                    })],
                     width=3,
                 ),
             ],
@@ -393,4 +407,18 @@ def download_csv(n_clicks, org1, org2, name_org1, name_org2):
     df = script.download_file(org1, org2, name_org1, name_org2)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     return dcc.send_data_frame(df.to_csv, f"{timestamp}.csv", index=False)
+
+@callback(
+    Output('download-orgs-json', 'data'),
+    Input('download-orgs-json-btn', 'n_clicks'),
+    State('org1-data', 'data'),
+    State('org2-data', 'data'),
+    State('org1-dropdown', 'value'),
+    State('org2-dropdown', 'value'),
+    prevent_initial_call=True
+)
+def download_csv(n_clicks, org1, org2, name_org1, name_org2):
+    df = script.download_file(org1, org2, name_org1, name_org2)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    return dcc.send_data_frame(df.to_json, f"{timestamp}.json", index=False)
 

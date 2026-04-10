@@ -250,7 +250,7 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
     return content_layout, filtered_projects.to_dict('records'), proj_filtered.to_json(orient='split'), tot_proj, tot_eur, tot_publ, tot_tops
 
 def polish_df(df: pd.DataFrame, org_name):
-    df = df.drop(columns=['topic_name_hierarchy', 'scopusID', 'n_proj', 'n_publ'])
+    df = df.drop(columns=['topic_name_hierarchy', 'n_proj', 'n_publ'])
     df = df.explode('projectIDs').reset_index(drop=True)
     df = df.rename(columns={'projectIDs': 'projectID', 'name': 'org_name'})
     df = df.drop_duplicates(subset=['organisationID', 'projectID']).reset_index(drop=True)
