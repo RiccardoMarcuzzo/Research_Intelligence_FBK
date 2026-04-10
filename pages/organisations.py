@@ -17,8 +17,8 @@ dash.register_page(
     order=1
 )
 
-DEFAULT_ORG = 'Fondazione bruno kessler'
-COMPARISON_ORG = 'Fondazione hub innovazione trentino'
+DEFAULT_ORG = 'Fondazione Bruno Kessler'
+COMPARISON_ORG = 'Fondazione Hub Innovazione Trentino'
 #--------------------------------------------
 # LAYOUT      
 #--------------------------------------------
