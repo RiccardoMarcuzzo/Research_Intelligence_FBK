@@ -146,11 +146,11 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
 
         org_stats = org_stats.drop(columns=['n_proj', 'netEcContribution'])
         org_stats.rename(columns={'n_publ': 'value'}, inplace=True)
-        
+    org_stats = org_stats.sort_values(by='value', ascending=True)
     palette = qualitative.Dark24
     org_stats['colors'] = [
         palette[i % len(palette)] for i in range(len(org_stats))
-    ]
+    ]    
 
     # STEP 5: Crea il grafico
     fig = go.Figure(data=[
@@ -161,6 +161,7 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
             hovertemplate=org_stats['custom_hover'],
             marker=dict(
                 color=org_stats['colors'],
+                #colorscale='blues',
                 showscale=False,
                 colorbar=dict(title=x_label)
             )
@@ -171,11 +172,14 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
         font_size=10,
         margin=dict(l=0, r=20, t=30, b=30),
         showlegend=False,
-        dragmode='pan',
+        dragmode=False,
+        xaxis_fixedrange=True,
+        yaxis_fixedrange=True,
         xaxis_title=x_label,
         yaxis_title=None,
         height=max(150, 30 * len(org_stats)) if len(org_stats) <= 10 else 20 * len(org_stats),
-        hovermode='closest'
+        hovermode='closest',
+        plot_bgcolor="#e6f4ea",
     )
 
     # STEP 6: Header organization
@@ -203,12 +207,7 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
     ]
 
     graph_row = dbc.Row(
-        dcc.Graph(figure=fig, config={'scrollZoom': True}),
-        className="mb-3"
-    )
-
-    graph_row = dbc.Row(
-        dcc.Graph(figure=fig, config={'scrollZoom': True}),
+        dcc.Graph(figure=fig, config={'scrollZoom': False}),
         className="mb-3"
     )
 

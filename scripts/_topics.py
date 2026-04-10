@@ -184,14 +184,16 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
     fig.update_layout(
         title=f"Top {n_orgs} Players in <b>{selected_topic}</b>",
         xaxis_title=x_label,
-        dragmode='pan',
+        dragmode=False,
+        xaxis_fixedrange=True,
+        yaxis_fixedrange=True,
         height=35*len(top_10) if is_1 else 30*len(top_10),
         margin=dict(l=20, r=20, t=60, b=40),
         hovermode='closest',
     )
     tot_proj, tot_eur, tot_publ, tot_org = populate_kpis(proj_filtered)
 
-    return [dcc.Graph(figure=fig, config={'scrollZoom': True})], proj_filtered.to_json(orient='split'), tot_proj, tot_eur, tot_publ, tot_org
+    return [dcc.Graph(figure=fig, config={'scrollZoom': False})], proj_filtered.to_json(orient='split'), tot_proj, tot_eur, tot_publ, tot_org
 
 def join_topics(topics1_orgs, topics2_orgs, metric, n_orgs):
     topics1_orgs = pd.read_json(io.StringIO(topics1_orgs), orient='split')
@@ -259,13 +261,15 @@ def join_topics(topics1_orgs, topics2_orgs, metric, n_orgs):
         title=f"Top {n_orgs} Players in both topics",
         xaxis_title=x_label,
         yaxis_title='Organisation',
-        dragmode='pan',
+        dragmode=False,
+        xaxis_fixedrange=True,
+        yaxis_fixedrange=True,
         height=30*len(top_10),
         margin=dict(l=20, r=20, t=60, b=40),
         hovermode='closest',
     )
    
-    return [dcc.Graph(figure=fig, config={'scrollZoom': True})]
+    return [dcc.Graph(figure=fig, config={'scrollZoom': False})]
 
 def polish_df(df:pd.DataFrame, topic_name):
     df = df.drop(columns=['topic_name_hierarchy', 'n_proj', 'n_publ'])
