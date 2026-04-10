@@ -24,11 +24,11 @@ if not base_path.endswith('/'): base_path = base_path + '/'
 
 PORT = args.port
 
-projects_df  = pd.read_parquet('data/docs2.parquet')
-orgs_df      = pd.read_parquet('data/orgs2.parquet')
+projects_df  = pd.read_parquet('data/docs.parquet')
+orgs_df      = pd.read_parquet('data/orgs.parquet')
 topics_df    = pd.read_parquet('data/topics.parquet', 
                                columns=['level_1', 'level_2', 'level_3', 'level_4', 'count'])
-org_topics_df = pd.read_parquet('data/org_topics2.parquet')
+org_topics_df = pd.read_parquet('data/org_topics.parquet')
 
 with open('data/labels.pkl', 'rb') as f:
     labels_pkl = pickle.load(f)
