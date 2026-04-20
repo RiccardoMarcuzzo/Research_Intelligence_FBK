@@ -84,7 +84,7 @@ def populate_doc_canvas(proj_id):
         html.P([
             html.Span('🔎 ', style={'marginRight': '4px'}),
             html.A('Search on Google',
-                   href=f'https://www.google.com/search?q=CORDIS%20{title}',
+                   href=f'https://cordis.europa.eu/project/id/{proj_id}',
                    target='_blank',
                    rel='noopener noreferrer',
                    style={'textDecoration': 'none','color': '#007BFF','fontWeight': 'bold'})
