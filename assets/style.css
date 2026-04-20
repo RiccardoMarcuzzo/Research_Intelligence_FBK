@@ -155,18 +155,13 @@
     color: #de4949 !important;
 }
 
-/* AI is thinking: responsive dots */
-@keyframes typing {
-    0%, 60%, 100% {
-        opacity: 0.3;
-    }
-    30% {
-        opacity: 1;
-    }
+/* Separatore netto tra items accordion */
+.projects-accordion .accordion-item {
+    border-bottom: 1px solid #dee2e6 !important;
 }
 
-.typing-dot {
-    animation: typing 1.4s infinite;
-    font-weight: bold;
-    font-size: 1.5rem;
+/* Sfondo del corpo espanso accordion */
+.projects-accordion .accordion-collapse .accordion-body {
+    background-color: #ffffffc9;
+    color: black;
 }

@@ -1,6 +1,7 @@
 import pickle
 import joblib
 import pandas as pd
+import numpy as np
 import argparse
 
 # questi import sono usati solo per RAG, dal momento che per RANK è stato optato per un lazy loading dentro _topics.py. Valutare se fare lo stesso per RAG.
@@ -8,7 +9,6 @@ from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForFeatureExtraction
 
 TITLE = 'RESEARCH INTELLIGENCE'
-GOOGLE_API = 'non_disponibile' #TODO: TO-REMOVE-ASKAI-RAG
 
 # Configurazione CLI 
 parser = argparse.ArgumentParser(description="Lancio della Dashboard Dash")
@@ -43,15 +43,11 @@ TOPIC_IDS = topic_rank_assets['topic_ids']
 TOPIC_EMBS = topic_rank_assets['embeddings']
 BM25 = topic_rank_assets['bm25_model']
 
-# caricamento per il RAG system (bloccato) #TODO: TO-REMOVE-ASKAI-RAG
-RAG_EMBS = None
-RAG_TOKENIZER = None
-RAG_MODEL = None
-"""
+# caricamento per il RAG system
 RAG_EMBS = np.load('data/bge_1024dim.npy')
-RAG_TOKENIZER = AutoTokenizer.from_pretrained('data/bge-m3-onnx')
-RAG_MODEL = ORTModelForFeatureExtraction.from_pretrained('data/bge-m3-onnx', provider='CPUExecutionProvider')
-"""
+
+# Lista dei topic
+topic_names = list(labels_pkl.values())
 
 # Dizionario completo dei codici paese (uppercase come nel dataset)
 COUNTRY_CODES = {

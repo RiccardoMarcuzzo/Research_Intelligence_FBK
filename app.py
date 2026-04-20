@@ -1,6 +1,6 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc, html, Input, Output, State, clientside_callback
+from dash import dcc, html, Input, Output
 from utils import TITLE, base_path, PORT
 
 FBK_LOGO = 'assets/img/fbk-logo-blue.png'
@@ -21,7 +21,7 @@ def redirect_root():
 NAVBAR = {
     "Topics":        {"relative_path": f"{base_path}"},
     "Organisations": {"relative_path": f"{base_path}organisations"},
-    "Ask AI":        {"relative_path": f"{base_path}askAI"},
+    "Projects":        {"relative_path": f"{base_path}askAI"},
     "Concept":       {"relative_path": f"{base_path}concept"},
 }
 

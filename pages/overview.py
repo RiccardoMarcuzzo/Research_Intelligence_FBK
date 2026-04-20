@@ -285,18 +285,18 @@ layout = html.Div([
             dbc.Card([
                 dbc.CardBody([
                     html.Div([
-                        html.I(className="bi bi-chat-dots", style={'fontSize': '3rem', 'color': '#dc3545'}),
+                        html.I(className="bi bi-card-checklist", style={'fontSize': '3rem', 'color': '#dc3545'}),
                     ], className="text-center mb-3"),
-                    html.H4("Ask AI", className="card-title text-center fw-bold"),
+                    html.H4("Projects", className="card-title text-center fw-bold"),
                     html.P(
-                        "Use RAG-powered search to ask questions in natural language. "
-                        "Get precise answers grounded in project descriptions, objectives, and outcomes.",
+                        "Describe what you’re looking for or explore projects using flexible filters (Programme, Country, Organization, Topic). " \
+                        "Get tailored results from the full CORDIS database.",
                         className="card-text text-muted",
                         style={'fontSize': '0.95rem', 'lineHeight': '1.6'}
                     ),
                     html.Div([
                         dcc.Link(
-                            dbc.Button("Try Ask AI →", color="danger", className="w-100 mt-3"),
+                            dbc.Button("Explore Projects →", color="danger", className="w-100 mt-3"),
                             href="askAI"
                         )
                     ])
@@ -305,12 +305,12 @@ layout = html.Div([
         ], width=4),
 
         dbc.Col([
-            html.H4('Page: Ask AI', className="fw-bold mt-2"),
+            html.H4('Page: Projects', className="fw-bold mt-2"),
             html.P(
                 'Do you have specific questions, or would you like to explore the project portfolio? ' \
                 'This page allows you to query the database directly; ' \
-                'a Retrieval-Augmented Generation (RAG) system will provide answers based on the evidence found within the CORDIS project corpus. ' \
-                'Furthermore, you can refine your search by focusing on a specific Framework Programme, Country, Organization, or any combination of these filters.',
+                'you can refine your search by focusing on a specific Framework Programme, Country, Organization, Topic, or any combination of these filters. ' \
+                'A retrieval system will provide all the projects within the CORDIS corpus that meet your requests.',
                 className="text-muted mt-4",
                 style={'fontSize': '1.1rem', 'lineHeight': '1.6'}
             )
@@ -357,7 +357,7 @@ layout = html.Div([
                 html.H5("Elisa Leonardelli", className="fw-bold mb-2 mt-2"),
                 html.A("eleonardelli@fbk.eu", href="mailto:eleonardelli@fbk.eu?rmarcuzzo@fbk.eu,vorsanigo@fbk.eu", 
                        className="text-info", style={'fontSize': '0.95rem'}),
-                html.P("Retrieval and organization of scientific publication dataset.", 
+                html.P("Retrieval and management of scientific publication dataset.", 
                     className="text-muted", style={'fontSize': '0.95rem', "minHeight": "60px"}),                
             ], width=4, className="text-center px-4"),
         ], className="justify-content-center mt-5"),

@@ -3,7 +3,7 @@ from datetime import datetime
 import dash_bootstrap_components as dbc
 import scripts._topics as script
 from dash import html, dcc, Input, Output, State, callback
-from utils import TITLE, COUNTRY_CODES, labels_pkl, base_path
+from utils import TITLE, COUNTRY_CODES, base_path, topic_names
 
 PAGE_TITLE = "Topics"
 
@@ -17,7 +17,6 @@ dash.register_page(
 
 DEFAULT_TOPIC = 'Natural Language Processing'
 COMPARISON_TOPIC = 'Industrial Safety'
-topic_names = list(labels_pkl.values())
 #--------------------------------------------
 # LAYOUT      
 #--------------------------------------------
