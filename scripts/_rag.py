@@ -1,5 +1,5 @@
 import torch
-import re
+import math
 import numpy as np
 import dash_bootstrap_components as dbc
 from sklearn.metrics.pairwise import cosine_similarity
@@ -60,10 +60,7 @@ def encode(text, max_length=8192):
     
     return embeddings.detach().cpu().numpy()
 
-def research_projects(*args):
-
-    if not any(args):
-        return['Enter your requests and click "Retrieve"']
+def build_accordion_items(*args):
 
     fp_list, country_list, org_list, topic_list, user_input = args
 
@@ -91,26 +88,44 @@ def research_projects(*args):
         filtered_embs = RAG_EMBS[active_indices]
         query_emb = encode(user_input, max_length=8192).reshape(1, -1)
         cos_scores = (filtered_embs @ query_emb.T).ravel()        
-
    
         valid = cos_scores > THRESHOLD
-        above = np.where(valid)[0]
-        print(cos_scores[above].shape)
-        best_indices = np.argsort(cos_scores[above])[::-1]
-        best_indices = above[best_indices]
-        print(best_indices)
-        """
-        best_indices = np.argsort(cos_scores)[::-1][:20]
-        print(best_indices)
-        valid = cos_scores[best_indices] > THRESHOLD
-        print(valid)
-        best_indices = best_indices[valid]
-        print(best_indices)
-        """
+        original_indices = np.where(valid)[0]
+        best_indices = np.argsort(cos_scores[original_indices])[::-1]
+        best_indices = original_indices[best_indices]
 
-        active_indices = active_indices[best_indices] 
+        active_indices = active_indices[best_indices]
 
-    filtered_projects = projects_df.iloc[active_indices].head(20)
+    filtered_projects = projects_df.iloc[active_indices]
+    if filtered_projects.empty:
+        return [], 0
+
+    accordion_items = []
+    for _, row in filtered_projects.iterrows():
+        cordis_url = f"https://cordis.europa.eu/project/id/{row['projectID']}"
+        proj_fp = 'Horizon 2020' if row['fp'] == 8 else 'Horizon Europe'
+        proj_hier = ' → '.join([t for t in row['topic_name_hierarchy'] if t != 'Unlabelled'])
+        header = html.Div([
+            html.Span(row['title'], style={'fontWeight': '600'}),
+            html.Div([
+                html.Small(f"{proj_fp}  ·  {proj_hier}", className="text-muted"),
+                html.Br(),
+                html.A("View on CORDIS ↗", href=cordis_url, target="_blank",
+                    className="text-danger", style={'fontSize': '0.8rem', 'textDecoration': 'none'}),
+            ], className="mt-1")
+        ])
+        body = html.Div([
+            html.P([html.Strong("Participants: "), ', '.join(row['participants'])]),
+            html.P([html.Strong("Objective: "), row['objective']]),
+        ])
+        accordion_items.append(
+            dbc.AccordionItem(body, title=header, item_id=str(row['projectID']))
+        )
+    
+    return accordion_items, len(accordion_items)
+
+
+    filtered_projects = projects_df.iloc[active_indices]#.head(20)
 
     if filtered_projects.empty:
         return['No projects found. Try different filters.']

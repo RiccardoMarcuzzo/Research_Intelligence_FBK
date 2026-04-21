@@ -1,4 +1,5 @@
 import dash
+import math
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output, State, ctx, callback, clientside_callback, ALL
 
@@ -143,7 +144,22 @@ layout = dbc.Container(
             style={'fontSize': '0.9rem'}
         ),
 
-        # RETRIEVED PROJECTS SECTION
+        # === RETRIEVED PROJECTS SECTION ===
+        html.Div([
+            html.Div(id='pagination-info', className="text-muted", style={'fontSize': '0.85rem'}),
+            html.Div([
+                dbc.Button("← Prev", id="btn-prev-page", size="sm", color="secondary",
+                        outline=True, disabled=True, className="me-2"),
+                dbc.Button("Next →", id="btn-next-page", size="sm", color="secondary",
+                        outline=True, disabled=True),
+            ], className="d-flex align-items-center")
+        ], id='pagination-controls',
+        className="d-flex justify-content-between align-items-center px-1 py-2 mt-2",
+        style={'display': 'none'}
+        ), 
+
+        dcc.Store(id='store-current-page', data=0),
+
         html.Div(
             id='results-section',
             children=[
@@ -163,7 +179,6 @@ layout = dbc.Container(
             },
             className="mt-4"
         ),
-
     ],
     id='rag-page',
     fluid=True,
@@ -212,12 +227,90 @@ def reset_filters(n_clicks):
 
 @callback(
     Output('results-section', 'children'),
+    Output('store-current-page', 'data'),
+    Output('pagination-info', 'children'),
+    Output('btn-prev-page', 'disabled'),
+    Output('btn-next-page', 'disabled'),
+    Output('pagination-controls', 'style'),
     Input('retrieve-button-proj', 'n_clicks'),
+    Input('btn-prev-page', 'n_clicks'),
+    Input('btn-next-page', 'n_clicks'),
     State('fp-filter-proj', 'value'),
     State('country-filter-proj', 'value'),
     State('org-filter-proj', 'value'),
     State('topic-filter-proj', 'value'),
     State('user-input-proj', 'value'),
+    State('store-current-page', 'data'),
+
 )
-def display_projects(n_clicks, fp_list, country_list, org_list, topic_list, user_input):
-    return script.research_projects(fp_list, country_list, org_list, topic_list, user_input)
+def display_projects(n_clicks, prev_clicks, next_clicks,
+                     fp_list, country_list, org_list, topic_list, user_input, current_page):
+    triggered = ctx.triggered_id
+
+    if triggered == 'btn-next-page':
+        current_page = (current_page or 0) + 1
+    elif triggered == 'btn-prev-page':
+        current_page = max(0, (current_page or 0) - 1)
+    else:
+        current_page = 0  # nuovo retrieve → reset
+
+    if not any([fp_list, country_list, org_list, topic_list, user_input]):
+        return (
+            [html.P('Enter your requests and click "Retrieve"')], 
+            0, "", True, True, {'display': 'none'}
+        )
+
+    accordion_items, total = script.build_accordion_items(
+        fp_list, country_list, org_list, topic_list, user_input
+    )
+
+    if not accordion_items:
+        return (
+            [html.P("No projects found. Try different filters.")],
+            0, "", True, True, {'display': 'none'}
+        )
+
+    PAGE_SIZE = 15
+    total = len(accordion_items)
+    total_pages = math.ceil(total / PAGE_SIZE)
+    start = current_page * PAGE_SIZE
+    end = min(start + PAGE_SIZE, total)
+
+    content = dbc.Accordion(
+        accordion_items[start:end],
+        flush=True, always_open=True, start_collapsed=True,
+        style={'borderRadius': '8px', 'overflow': 'hidden'},
+        class_name='projects-accordion'
+    )
+
+    info = f"Showing {start + 1}–{end} of {total} projects"
+    style_visible = {'display': 'flex', 'justifyContent': 'space-between',
+                     'alignItems': 'center', 'padding': '8px 4px'}
+
+    return (
+        [content],
+        current_page,
+        info,
+        current_page == 0,              # prev disabled
+        current_page >= total_pages - 1, # next disabled
+        style_visible
+    )
+
+# Callback separato per gestire i bottoni di navigazione
+@callback(
+    Output('store-current-page', 'data', allow_duplicate=True),
+    Input('btn-prev-page', 'n_clicks'),
+    Input('btn-next-page', 'n_clicks'),
+    Input('retrieve-button-proj', 'n_clicks'),
+    State('store-current-page', 'data'),
+    prevent_initial_call=True
+)
+def update_page(prev_clicks, next_clicks, n_click, *filter_inputs_and_state):
+    current_page = filter_inputs_and_state[-1]
+    triggered = ctx.triggered_id
+    if triggered == 'btn-next-page':
+        return current_page + 1
+    elif triggered == 'btn-prev-page':
+        return max(0, current_page - 1)
+    else:
+        return 0
