@@ -187,7 +187,7 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
         dragmode=False,
         xaxis_fixedrange=True,
         yaxis_fixedrange=True,
-        height=35*len(top_10) if is_1 else 30*len(top_10),
+        height=max(150, 35*len(top_10)) if is_1 else max(150, 30*len(top_10)),
         margin=dict(l=20, r=20, t=60, b=40),
         hovermode='closest',
     )
