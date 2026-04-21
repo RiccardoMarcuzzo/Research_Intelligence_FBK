@@ -21,7 +21,7 @@ def redirect_root():
 NAVBAR = {
     "Topics":        {"relative_path": f"{base_path}"},
     "Organisations": {"relative_path": f"{base_path}organisations"},
-    "Projects":        {"relative_path": f"{base_path}askAI"},
+    "Projects":        {"relative_path": f"{base_path}projects"},
     "Concept":       {"relative_path": f"{base_path}concept"},
 }
 
