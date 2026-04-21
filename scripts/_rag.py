@@ -34,11 +34,11 @@ def get_rank_model():
     global _rag_tokenizer, _rag_model
     if _rag_model is None:
         print("Caricamento RAG model...") 
-        _rank_tokenizer = AutoTokenizer.from_pretrained('data/bge-m3-onnx')
-        _rank_model = ORTModelForFeatureExtraction.from_pretrained(
+        _rag_tokenizer = AutoTokenizer.from_pretrained('data/bge-m3-onnx')
+        _rag_model = ORTModelForFeatureExtraction.from_pretrained(
             'data/bge-m3-onnx', provider='CPUExecutionProvider'
         )
-    return _rank_tokenizer, _rank_model
+    return _rag_tokenizer, _rag_model
 
 
 def encode(text, max_length=8192):
@@ -67,33 +67,50 @@ def research_projects(*args):
 
     fp_list, country_list, org_list, topic_list, user_input = args
 
-    mask = True
+    active_indices = np.arange(len(projects_df))
 
     if fp_list:
-        mask &= projects_df['fp'].isin(fp_list)
+        match = projects_df['fp'].isin(fp_list).to_numpy()
+        active_indices = active_indices[match[active_indices]]
 
     # Filtro geografico: bypassa countrylist se è presente almeno una organizzazione       
     if org_list:
-        mask &= projects_df['participants'].apply(lambda x: bool(set(x) & set(org_list)))
-    elif not country_list:
-        pass   
+        match = projects_df['participants'].apply(lambda x: bool(set(x) & set(org_list))).to_numpy()
+        active_indices = active_indices[match[active_indices]]
+    elif country_list:
+        match = projects_df['participants_country_code'].apply(lambda x: bool(set(x) & set(country_list))).to_numpy()
+        active_indices = active_indices[match[active_indices]]
     else:
-        mask &= projects_df['participants_country_code'].apply(lambda x: bool(set(x) & set(country_list)))
+        pass
 
     if topic_list:
-        mask &= projects_df['topic_name_hierarchy'].apply(lambda x: bool(set(x) & set(topic_list)))
+        mask &= projects_df['topic_name_hierarchy'].apply(lambda x: bool(set(x) & set(topic_list))).to_numpy()
+        active_indices = active_indices[match[active_indices]]
 
     if user_input:
-        filtered_embs = RAG_EMBS[mask]
-
+        filtered_embs = RAG_EMBS[active_indices]
         query_emb = encode(user_input, max_length=8192).reshape(1, -1)
-        cos_scores = cosine_similarity(query_emb, filtered_embs)[0]
+        cos_scores = (filtered_embs @ query_emb.T).ravel()        
+
+   
+        valid = cos_scores > THRESHOLD
+        above = np.where(valid)[0]
+        print(cos_scores[above].shape)
+        best_indices = np.argsort(cos_scores[above])[::-1]
+        best_indices = above[best_indices]
+        print(best_indices)
+        """
         best_indices = np.argsort(cos_scores)[::-1][:20]
+        print(best_indices)
+        valid = cos_scores[best_indices] > THRESHOLD
+        print(valid)
+        best_indices = best_indices[valid]
+        print(best_indices)
+        """
 
-        valid_mask = cos_scores[best_indices] > THRESHOLD
-        mask = best_indices[valid_mask]
+        active_indices = active_indices[best_indices] 
 
-    filtered_projects = projects_df.loc[mask].head(20)
+    filtered_projects = projects_df.iloc[active_indices].head(20)
 
     if filtered_projects.empty:
         return['No projects found. Try different filters.']
