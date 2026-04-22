@@ -12,6 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForFeatureExtraction
 
+import time
 _rank_tokenizer = None
 _rank_model = None
 
@@ -79,9 +80,7 @@ def populate_kpis(project_df):
 
 def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], n_orgs=0, is_1=True):
     # STEP 1: Filtra progetti per topic
-    mask_topics = org_topics_df['topic_name_hierarchy'].apply(
-        lambda topics: selected_topic in topics if hasattr(topics, '__iter__') else False)
-    topics_data = org_topics_df[mask_topics].copy()
+    topics_data = org_topics_df.copy()
     
     # STEP 2: Filtra per Framework Programme
     proj_filtered = topics_data[topics_data['fp'].isin(fp_list)]
@@ -129,6 +128,10 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
         )
 
         return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, 'N/A', 'N/A', 'N/A', 'N/A'
+    
+    mask_topics = proj_filtered['topic_name_hierarchy'].apply(
+        lambda topics: selected_topic in set(topics))
+    proj_filtered = proj_filtered[mask_topics]
     
     # STEP 5: Aggrega per organizzazione secondo la metrica
     org_stats = proj_filtered.groupby('name').agg({
