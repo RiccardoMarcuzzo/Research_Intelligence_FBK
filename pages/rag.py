@@ -39,7 +39,7 @@ layout = dbc.Container(
                             placeholder='Select Framework Programmes...',
                         ),
                     ],
-                    width=3
+                    width=2
                 ),
                 dbc.Col(
                     [
@@ -56,7 +56,27 @@ layout = dbc.Container(
                             placeholder='Select countries...',
                         ),
                     ],
-                    width=3
+                    width=2
+                ),
+                dbc.Col(
+                    [
+                        html.Label("Organisation type", className="form-label fw-semibold mb-2",
+                                   style={'fontSize': '0.9rem'}),
+                        dcc.Dropdown(
+                            id='type-filter-proj',
+                            options=[
+                                {'label': 'Research organisation', 'value': 'REC'},
+                                {'label': 'Higher education establishment', 'value': 'HES'},
+                                {'label': 'Private for profit companies', 'value': 'PRC'},
+                                {'label': 'Public bodies', 'value': 'PUB'},
+                                {'label': 'Other', 'value': 'OTH'},
+                            ],
+                            value=[],
+                            multi=True,
+                            placeholder='Select organisation types...',
+                        ),
+                    ],
+                    width=2
                 ),
                 dbc.Col(
                     [
