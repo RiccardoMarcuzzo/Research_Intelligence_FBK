@@ -107,6 +107,10 @@ def build_accordion_items(*args):
         cordis_url = f"https://cordis.europa.eu/project/id/{row['projectID']}"
         proj_fp = 'Horizon 2020' if row['fp'] == 8 else 'Horizon Europe'
         proj_hier = ' → '.join([t for t in row['topic_name_hierarchy'] if t != 'Unlabelled'])
+        deliverables = [
+            html.A(f'Deliverable {n} ↗', href=link, target="_blank", style={'marginRight': '12px', 'color': '#1a5276'})
+            for n, link in enumerate(row['physUrl'])
+        ]
         header = html.Div([
             html.Span(row['title'], style={'fontWeight': '600'}),
             html.Div([
@@ -119,6 +123,7 @@ def build_accordion_items(*args):
         body = html.Div([
             html.P([html.Strong("Participants: "), ', '.join(row['participants'])]),
             html.P([html.Strong("Objective: "), row['objective']]),
+            html.P([html.Strong("Deliverables  "), *deliverables]),            
         ])
         accordion_items.append(
             dbc.AccordionItem(body, title=header, item_id=str(row['projectID']))
