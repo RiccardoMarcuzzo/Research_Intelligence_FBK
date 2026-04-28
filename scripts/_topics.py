@@ -12,7 +12,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForFeatureExtraction
 
-import time
 _rank_tokenizer = None
 _rank_model = None
 

@@ -222,7 +222,7 @@ def update_dropdown_org_filter(search_value, selected_orgs, countries):
     prevent_initial_call=True,
 )
 def reset_filters(n_clicks):
-    return [], [], [], [], '', ['Type your requests and click "Retrieve"']
+    return [], [], [], [], '', ['Enter your requests and click "Retrieve"']
 
 
 @callback(

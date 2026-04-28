@@ -1,5 +1,4 @@
 import torch
-import math
 import numpy as np
 import dash_bootstrap_components as dbc
 from sklearn.metrics.pairwise import cosine_similarity

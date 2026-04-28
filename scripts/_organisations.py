@@ -82,7 +82,11 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
     row = orgs_df[orgs_df['name'] == selected_org]
     org_data = org_topics_df[org_topics_df['organisationID'].isin(row['organisationID'].unique())]
 
-    row = row.iloc[0]
+    #row = row.iloc[0]
+    combined_project_ids = row['projectIDs'].explode().unique().tolist()
+    row = row.iloc[0].copy()
+    row['projectIDs'] = combined_project_ids
+
     filtered_projects = (
         projects_df[projects_df['projectID'].isin(row['projectIDs'])]
         .copy()
