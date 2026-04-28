@@ -77,7 +77,7 @@ def populate_kpis(project_df):
     return tot_proj, tot_eur, tot_publ, tot_org
 
 
-def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], n_orgs=0, is_1=True):
+def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], typeorg_list=[], n_orgs=0, is_1=True):
     # STEP 1: Filtra progetti per topic
     topics_data = org_topics_df.copy()
     
@@ -128,6 +128,27 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
 
         return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, 'N/A', 'N/A', 'N/A', 'N/A'
     
+    # STEP 4: Filtra per organisation type
+    if typeorg_list:
+        proj_filtered = proj_filtered[proj_filtered['activityType'].isin(typeorg_list)]
+
+    if proj_filtered.empty:
+        fig = go.Figure()
+        fig.update_layout(
+            title=f"No organisations found for selected types",
+            annotations=[{
+                'text': 'Try selecting different types',
+                'xref': 'paper',
+                'yref': 'paper',
+                'x': 0.5,
+                'y': 0.5,
+                'showarrow': False,
+                'font': {'size': 16, 'color': 'gray'}
+            }]
+        )
+
+        return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, 'N/A', 'N/A', 'N/A', 'N/A'
+
     mask_topics = proj_filtered['topic_name_hierarchy'].apply(
         lambda topics: selected_topic in set(topics))
     proj_filtered = proj_filtered[mask_topics]

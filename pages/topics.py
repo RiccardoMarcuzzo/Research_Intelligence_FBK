@@ -275,6 +275,25 @@ layout = dbc.Container(
                                             ),
                                         ], className="mb-3"),
 
+                                        html.Div([
+                                            html.Label("Organisation Type", className="form-label fw-semibold mb-2",
+                                                    style={'fontSize': '0.9rem'}),
+                                            dcc.Dropdown(
+                                                id='type-filter',
+                                                options=[
+                                                    {'label': 'Research organisation', 'value': 'REC'},
+                                                    {'label': 'Higher education establishment', 'value': 'HES'},
+                                                    {'label': 'Private for profit companies', 'value': 'PRC'},
+                                                    {'label': 'Public bodies', 'value': 'PUB'},
+                                                    {'label': 'Other', 'value': 'OTH'},
+                                                ],
+                                                value=[],
+                                                multi=True,
+                                                placeholder='Select organisation types...',
+                                                className='mb-3'
+                                            ),
+                                        ], className="mb-3"),
+
                                         dbc.Button(
                                             "Reset Filters",
                                             id='reset-filters-btn',
@@ -418,9 +437,10 @@ def select_topic(n_clicks_list):
     Input('metric-filter', 'value'),
     Input('fp-filter', 'value'),
     Input('country-filter', 'value'),
+    Input('type-filter', 'value'),
     Input('slider-orgs', 'value')
 )
-def show_info_topic(selected_topic, metric, fp_list, country_list, n_orgs):
+def show_info_topic(selected_topic, metric, fp_list, country_list, typeorg_list, n_orgs):
     if not selected_topic:
         return [], None, 'N/A', 'N/A', 'N/A', 'N/A'
     
@@ -430,6 +450,7 @@ def show_info_topic(selected_topic, metric, fp_list, country_list, n_orgs):
         metric=metric,
         fp_list=fp_list,
         country_list=country_list,
+        typeorg_list=typeorg_list,
         n_orgs=n_orgs
     )
     
@@ -446,9 +467,10 @@ def show_info_topic(selected_topic, metric, fp_list, country_list, n_orgs):
     Input('metric-filter', 'value'),
     Input('fp-filter', 'value'),
     Input('country-filter', 'value'),
+    Input('type-filter', 'value'),
     Input('slider-orgs', 'value')
 )
-def show_info_topic2(selected_topic, metric, fp_list, country_list, n_orgs):
+def show_info_topic2(selected_topic, metric, fp_list, country_list, typeorg_list, n_orgs):
     if not selected_topic:
         return [], None, 'N/A', 'N/A', 'N/A', 'N/A'
     
@@ -458,6 +480,7 @@ def show_info_topic2(selected_topic, metric, fp_list, country_list, n_orgs):
         metric=metric,
         fp_list=fp_list,
         country_list=country_list,
+        typeorg_list=typeorg_list,
         n_orgs=n_orgs,
         is_1=False
     )
