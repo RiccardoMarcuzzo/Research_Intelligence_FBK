@@ -215,13 +215,14 @@ layout = dbc.Container(
     Input('org-filter-proj', 'search_value'),
     State('org-filter-proj', 'value'),
     State('country-filter-proj', 'value'),
+    State('type-filter-proj', 'value'),
     prevent_initial_call=True
 )
-def update_dropdown_org_filter(search_value, selected_orgs, countries):
+def update_dropdown_org_filter(search_value, selected_orgs, countries, types):
     if not search_value:
         raise dash.exceptions.PreventUpdate
     
-    new_options = script.update_dropdown(search_value, countries)
+    new_options = script.update_dropdown(search_value, countries, types)
 
     if selected_orgs:
         existing = [{'label': org, 'value': org} for org in selected_orgs]
@@ -257,6 +258,7 @@ def reset_filters(n_clicks):
     Input('btn-next-page', 'n_clicks'),
     State('fp-filter-proj', 'value'),
     State('country-filter-proj', 'value'),
+    State('type-filter-proj', 'value'),
     State('org-filter-proj', 'value'),
     State('topic-filter-proj', 'value'),
     State('user-input-proj', 'value'),
@@ -264,7 +266,7 @@ def reset_filters(n_clicks):
 
 )
 def display_projects(n_clicks, prev_clicks, next_clicks,
-                     fp_list, country_list, org_list, topic_list, user_input, current_page):
+                     fp_list, country_list, typeorg_list, org_list, topic_list, user_input, current_page):
     triggered = ctx.triggered_id
 
     if triggered == 'btn-next-page':
@@ -274,14 +276,14 @@ def display_projects(n_clicks, prev_clicks, next_clicks,
     else:
         current_page = 0  # nuovo retrieve → reset
 
-    if not any([fp_list, country_list, org_list, topic_list, user_input]):
+    if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
         return (
             [html.P('Enter your requests and click "Retrieve"')], 
             0, "", True, True, {'display': 'none'}
         )
 
     accordion_items, total = script.build_accordion_items(
-        fp_list, country_list, org_list, topic_list, user_input
+        fp_list, country_list, typeorg_list, org_list, topic_list, user_input
     )
 
     if not accordion_items:
