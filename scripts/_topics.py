@@ -287,7 +287,7 @@ def join_topics(topics1_orgs, topics2_orgs, metric, n_orgs):
         dragmode=False,
         xaxis_fixedrange=True,
         yaxis_fixedrange=True,
-        height=30*len(top_10),
+        height=max(150, 30*len(top_10)),
         margin=dict(l=20, r=20, t=60, b=40),
         hovermode='closest',
     )
