@@ -294,6 +294,21 @@ layout = dbc.Container(
                                             ),
                                         ], className="mb-3"),
 
+                                        html.Div([
+                                            html.Label("Organisation role", className="form-label fw-semibold mb-2",
+                                                    style={'fontSize': '0.9rem'}),
+                                            dbc.RadioItems(
+                                                id='role-filter',
+                                                options=[
+                                                    {'label': 'Coordinator', 'value': 'coordinator'},
+                                                    {'label': 'Participant', 'value': 'participant'},
+                                                    {'label': 'Both', 'value': 'both'}
+                                                ],
+                                                value='both',
+                                                className='mb-3'
+                                            ),
+                                        ], className="mb-3"),
+
                                         dbc.Button(
                                             "Reset Filters",
                                             id='reset-filters-btn',
@@ -438,9 +453,10 @@ def select_topic(n_clicks_list):
     Input('fp-filter', 'value'),
     Input('country-filter', 'value'),
     Input('type-filter', 'value'),
+    Input('role-filter', 'value'),
     Input('slider-orgs', 'value')
 )
-def show_info_topic(selected_topic, metric, fp_list, country_list, typeorg_list, n_orgs):
+def show_info_topic(selected_topic, metric, fp_list, country_list, typeorg_list, role, n_orgs):
     if not selected_topic:
         return [], None, 'N/A', 'N/A', 'N/A', 'N/A'
     
@@ -451,6 +467,7 @@ def show_info_topic(selected_topic, metric, fp_list, country_list, typeorg_list,
         fp_list=fp_list,
         country_list=country_list,
         typeorg_list=typeorg_list,
+        role=role,
         n_orgs=n_orgs
     )
     
@@ -468,9 +485,10 @@ def show_info_topic(selected_topic, metric, fp_list, country_list, typeorg_list,
     Input('fp-filter', 'value'),
     Input('country-filter', 'value'),
     Input('type-filter', 'value'),
+    Input('role-filter', 'value'),
     Input('slider-orgs', 'value')
 )
-def show_info_topic2(selected_topic, metric, fp_list, country_list, typeorg_list, n_orgs):
+def show_info_topic2(selected_topic, metric, fp_list, country_list, typeorg_list, role, n_orgs):
     if not selected_topic:
         return [], None, 'N/A', 'N/A', 'N/A', 'N/A'
     
@@ -481,6 +499,7 @@ def show_info_topic2(selected_topic, metric, fp_list, country_list, typeorg_list
         fp_list=fp_list,
         country_list=country_list,
         typeorg_list=typeorg_list,
+        role=role,
         n_orgs=n_orgs,
         is_1=False
     )
@@ -504,11 +523,13 @@ def join_topics(topics1_orgs, topics2_orgs, metric, n_orgs):
     Output('metric-filter', 'value'),
     Output('fp-filter', 'value'),
     Output('country-filter', 'value'),
-    Input('reset-filters-btn', 'n_clicks'),
+    Output('type-filter', 'value'),
+    Output('role-filter', 'value'),
+    Input('reset-filters-btn', 'n_clicks'),    
     prevent_initial_call=True
 )
 def reset_filters(n_clicks):
-    return 'n_progetti', [8, 9], ['EU']
+    return 'n_progetti', [8, 9], ['EU'], [], 'both'
 
 # === DOWNLOAD BUTTONS ===
 @callback(

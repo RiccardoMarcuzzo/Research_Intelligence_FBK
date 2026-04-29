@@ -77,67 +77,39 @@ def populate_kpis(project_df):
     return tot_proj, tot_eur, tot_publ, tot_org
 
 
-def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], typeorg_list=[], n_orgs=0, is_1=True):
+def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], typeorg_list=[], role='both', n_orgs=0, is_1=True):
     # STEP 1: Filtra progetti per topic
     topics_data = org_topics_df.copy()
     
     # STEP 2: Filtra per Framework Programme
     proj_filtered = topics_data[topics_data['fp'].isin(fp_list)]
-   
-    # STEP 3: Verifica se ci sono progetti dopo il filtro FP
-    if proj_filtered.empty:
-        fig = go.Figure()
-        fig.update_layout(
-            title=f"No organisations found for selected framework programme",
-            xaxis_title='',
-            yaxis_title='',
-            annotations=[{
-                'text': 'Try selecting different framework programmes',
-                'xref': 'paper',
-                'yref': 'paper',
-                'x': 0.5,
-                'y': 0.5,
-                'showarrow': False,
-                'font': {'size': 16, 'color': 'gray'}
-            }]
-        )
-        return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, 'N/A', 'N/A', 'N/A', 'N/A'
-    
-    # STEP 4: Filtra per Country
+      
+    # STEP 3: Filtra per Country
     if 'ALL' not in country_list:
         if 'EU' in country_list:
             country_list_expanded = [c for c in country_list if c != 'EU'] + EU_COUNTRY_CODES
             proj_filtered = proj_filtered[proj_filtered['country_code'].isin(country_list_expanded)]
         else:
             proj_filtered = proj_filtered[proj_filtered['country_code'].isin(country_list)]
-    
-    if proj_filtered.empty:
-        fig = go.Figure()
-        fig.update_layout(
-            title=f"No organisations found for selected countries",
-            annotations=[{
-                'text': 'Try selecting different countries',
-                'xref': 'paper',
-                'yref': 'paper',
-                'x': 0.5,
-                'y': 0.5,
-                'showarrow': False,
-                'font': {'size': 16, 'color': 'gray'}
-            }]
-        )
-
-        return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, 'N/A', 'N/A', 'N/A', 'N/A'
-    
+       
     # STEP 4: Filtra per organisation type
     if typeorg_list:
         proj_filtered = proj_filtered[proj_filtered['activityType'].isin(typeorg_list)]
 
+    # STEP 5: Filtra per ruolo
+    if role == 'coordinator':
+        proj_filtered = proj_filtered[proj_filtered['role'] == 'coordinator']
+    elif role == 'participant':
+        proj_filtered = proj_filtered[proj_filtered['role'].isin(['participant', 'associatedPartner', 'thirdParty'])]
+    else: # role == 'both'
+        pass
+
     if proj_filtered.empty:
         fig = go.Figure()
         fig.update_layout(
-            title=f"No organisations found for selected types",
+            title=f"No organisations found",
             annotations=[{
-                'text': 'Try selecting different types',
+                'text': 'Try selecting different values',
                 'xref': 'paper',
                 'yref': 'paper',
                 'x': 0.5,
@@ -146,7 +118,6 @@ def show_info(selected_topic, metric='n_progetti', fp_list=[], country_list=[], 
                 'font': {'size': 16, 'color': 'gray'}
             }]
         )
-
         return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, 'N/A', 'N/A', 'N/A', 'N/A'
 
     mask_topics = proj_filtered['topic_name_hierarchy'].apply(
