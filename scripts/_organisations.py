@@ -76,35 +76,33 @@ def compare_organisations(org1_docs, org2_docs):
     )
 
 
-def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=True):
+def show_info(selected_org, metric='n_progetti', fp_list=[], role='both', display_projects=True):
 
     # STEP 1: Filtra progetti per organisationID
     row = orgs_df[orgs_df['name'] == selected_org]
     org_data = org_topics_df[org_topics_df['organisationID'].isin(row['organisationID'].unique())]
 
-    #row = row.iloc[0]
-    combined_project_ids = row['projectIDs'].explode().unique().tolist()
-    row = row.iloc[0].copy()
-    row['projectIDs'] = combined_project_ids
-
-    filtered_projects = (
-        projects_df[projects_df['projectID'].isin(row['projectIDs'])]
-        .copy()
-        .pipe(lambda df: df[df['fp'].isin(fp_list)])
-    )
+    row = row.iloc[-1].copy()
 
     # STEP 2: Filtra per Framework Programme
     proj_filtered = org_data[org_data['fp'].isin(fp_list)]
+       
+    # STEP 3: Filtra per ruolo
+    if role == 'coordinator':
+        proj_filtered = proj_filtered[proj_filtered['role'] == 'coordinator']
+    elif role == 'participant':
+        proj_filtered = proj_filtered[proj_filtered['role'].isin(['participant', 'associatedPartner', 'thirdParty'])]
+    else: # role == 'both'
+        pass
 
-    # STEP 3: Verifica se ci sono progetti dopo il filtro FP
     if proj_filtered.empty:
         fig = go.Figure()
         fig.update_layout(
-            title=f"No projects found for selected framework programme",
+            title=f"No projects found",
             xaxis_title='',
             yaxis_title='',
             annotations=[{
-                'text': 'Try selecting different framework programmes',
+                'text': 'Try selecting different values',
                 'xref': 'paper',
                 'yref': 'paper',
                 'x': 0.5,
@@ -114,6 +112,9 @@ def show_info(selected_org, metric='n_progetti', fp_list=[], display_projects=Tr
             }]
         )
         return [dcc.Graph(figure=fig, config={'scrollZoom': True})], None, None, 'N/A', 'N/A', 'N/A', 'N/A'
+    
+    projectIDs_list = proj_filtered['projectIDs'].explode().unique().tolist()
+    filtered_projects = projects_df[projects_df['projectID'].isin(projectIDs_list)]
 
     proj_filtered['topic_name'] = proj_filtered['topic_name_hierarchy'].apply(
         lambda x: next((el for el in x if el != 'Unlabelled'), '')

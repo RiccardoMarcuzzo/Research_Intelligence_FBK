@@ -226,6 +226,21 @@ layout = dbc.Container(
                                             ),
                                         ], className="mb-3"),
 
+                                        html.Div([
+                                            html.Label("Organisation role", className="form-label fw-semibold mb-2",
+                                                    style={'fontSize': '0.9rem'}),
+                                            dbc.RadioItems(
+                                                id='role-filter-org',
+                                                options=[
+                                                    {'label': 'Coordinator', 'value': 'coordinator'},
+                                                    {'label': 'Participant', 'value': 'participant'},
+                                                    {'label': 'Both', 'value': 'both'}
+                                                ],
+                                                value='both',
+                                                className='mb-3'
+                                            ),
+                                        ], className="mb-3"),
+
                                         dbc.Button(
                                             "Reset Filters",
                                             id='reset-filters-btn-org',
@@ -324,15 +339,17 @@ def update_dropdown_org1(search_value):
     Input('org1-dropdown', 'value'),
     Input('metric-filter-org', 'value'),
     Input('fp-filter-org', 'value'),
+    Input('role-filter-org', 'value'),
 )
-def show_info_org1(selected_org, metric, fp_list):
+def show_info_org1(selected_org, metric, fp_list, role):
     if not selected_org:
         return [], None, None, 'N/A', 'N/A', 'N/A', 'N/A'
     
     info_content, topics_data, org_data, tot_proj, tot_eur, tot_publ, times_cp = script.show_info(
         selected_org=selected_org,
         metric=metric,
-        fp_list=fp_list)
+        fp_list=fp_list,
+        role=role)
 
     return info_content, topics_data, org_data, tot_proj, tot_eur, tot_publ, times_cp
 
@@ -358,8 +375,9 @@ def update_dropdown_org2(search_value):
     Input('org2-dropdown', 'value'),
     Input('metric-filter-org', 'value'),
     Input('fp-filter-org', 'value'),
+    Input('role-filter-org', 'value'),
 )
-def show_info_org2(selected_org, metric, fp_list):
+def show_info_org2(selected_org, metric, fp_list, role):
     if not selected_org:
         return [], None, None, 'N/A', 'N/A', 'N/A', 'N/A'
     
@@ -367,6 +385,7 @@ def show_info_org2(selected_org, metric, fp_list):
         selected_org=selected_org,
         metric=metric,      
         fp_list=fp_list,
+        role=role,
         display_projects=False)
     
     return info_content, topics_data, org_data, tot_proj, tot_eur, tot_publ, times_cp
@@ -387,11 +406,12 @@ def compare_orgs(org1_docs, org2_docs):
 @callback(
     Output('metric-filter-org', 'value'),
     Output('fp-filter-org', 'value'),
+    Output('role-filter-org', 'value'),
     Input('reset-filters-btn-org', 'n_clicks'),
     prevent_initial_call=True
 )
 def reset_filters(n_clicks):
-    return 'n_progetti', [8, 9]
+    return 'n_progetti', [8, 9], 'both'
 
 # === DOWNLOAD BUTTONS ===
 @callback(
