@@ -235,6 +235,7 @@ def update_dropdown_org_filter(search_value, selected_orgs, countries, types):
 @callback(
     Output('fp-filter-proj', 'value'),
     Output('country-filter-proj', 'value'),
+    Output('type-filter-proj', 'value'),
     Output('org-filter-proj', 'value'),
     Output('topic-filter-proj', 'value'),
     Output('user-input-proj', 'value'),
@@ -243,7 +244,7 @@ def update_dropdown_org_filter(search_value, selected_orgs, countries, types):
     prevent_initial_call=True,
 )
 def reset_filters(n_clicks):
-    return [], [], [], [], '', ['Enter your requests and click "Retrieve"']
+    return [], [], [], [], [], '', ['Enter your requests and click "Retrieve"']
 
 
 @callback(
