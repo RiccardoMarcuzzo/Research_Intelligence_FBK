@@ -8,7 +8,7 @@ from optimum.onnxruntime import ORTModelForFeatureExtraction
 
 from utils import org_topics_df, projects_df, RAG_EMBS
 
-THRESHOLD = 0.6
+THRESHOLD = 0.55
 _rag_tokenizer = None
 _rag_model = None
 
