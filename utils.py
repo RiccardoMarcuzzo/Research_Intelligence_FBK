@@ -1,12 +1,8 @@
 import pickle
-import joblib
+
 import pandas as pd
 import numpy as np
 import argparse
-
-# questi import sono usati solo per RAG, dal momento che per RANK è stato optato per un lazy loading dentro _topics.py. Valutare se fare lo stesso per RAG.
-from transformers import AutoTokenizer
-from optimum.onnxruntime import ORTModelForFeatureExtraction
 
 TITLE = 'RESEARCH INTELLIGENCE'
 
@@ -37,17 +33,11 @@ PROJs_No = projects_df['projectID'].nunique()
 ORGs_No = orgs_df['organisationID'].nunique()
 TOPs_No = len(labels_pkl)
 
-# caricamento per il ranking dei topic suggestion
-topic_rank_assets = joblib.load('data/topic_search_assets_all.pkl')
-TOPIC_IDS = topic_rank_assets['topic_ids']
-TOPIC_EMBS = topic_rank_assets['embeddings']
-BM25 = topic_rank_assets['bm25_model']
-
 # caricamento per il RAG system
 RAG_EMBS = np.load('data/bge_1024dim.npy')
 
 # Lista dei topic
-topic_names = list(labels_pkl.values())
+topic_names = sorted(labels_pkl.values())
 
 # Dizionario completo dei codici paese (uppercase come nel dataset)
 COUNTRY_CODES = {

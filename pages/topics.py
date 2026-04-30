@@ -3,7 +3,7 @@ from datetime import datetime
 import dash_bootstrap_components as dbc
 import scripts._topics as script
 from dash import html, dcc, Input, Output, State, callback
-from utils import TITLE, COUNTRY_CODES, base_path, topic_names
+from utils import TITLE, COUNTRY_CODES, topic_names
 
 PAGE_TITLE = "Topics"
 
@@ -183,42 +183,6 @@ layout = dbc.Container(
 
                                 # DIVIDER + HINT
                                 html.Hr(className="my-2"),
-                                html.P(
-                                    [
-                                        "Not sure what to search? Try typing a definition or description "
-                                        "and find the most similar topics in our ",
-                                        html.A("taxonomy", href=f"{base_path}concept#taxonomy-section"),
-                                        "."
-                                    ],
-                                    className="text-muted fst-italic mb-2",
-                                    style={'fontSize': '0.85rem'}
-                                ),
-
-                                # SUGGEST
-                                html.Div(
-                                    id='suggest-container',
-                                    children=[
-                                        dbc.Input(
-                                            id='suggest-input',
-                                            placeholder="Type...",
-                                            maxLength=140,
-                                            style={'minHeight': '40px'},
-                                            className='mb-2'
-                                        ),
-                                        html.Div([
-                                            dbc.Button(
-                                                "Find",
-                                                id='submit-suggest-btn',
-                                                color="success",
-                                                size="sm",
-                                                className='me-2 d-inline-flex align-items-center'
-                                            ),
-                                            html.Span(id='suggested-topics-buttons', style={'overflowX': 'auto', 'whiteSpace': 'nowrap', 'display': 'inline-flex', 'alignItems': 'center'})
-                                        ], className='d-flex align-items-center')
-                                    ],
-                                ),
-
-                                html.Hr(className="my-3"),
 
                                 # FILTERS
                                 html.Div(
@@ -386,61 +350,6 @@ layout = dbc.Container(
 #--------------------------------------------
 # CALLBACK    
 #--------------------------------------------
-# Mostra i bottoni con i topic suggeriti
-@callback(
-    Output('suggested-topics-buttons', 'children', allow_duplicate=True),
-    Input('submit-suggest-btn', 'n_clicks'),
-    Input('suggest-input', 'n_submit'),    
-    State('suggest-input', 'value'),
-    prevent_initial_call=True,
-    suppress_callback_exceptions=True
-)
-def show_suggested_topics(n_clicks, n_submit, user_text):
-    if not user_text:
-        raise dash.exceptions.PreventUpdate
-    
-    suggested_topics = script.suggest_topic(user_text)
-    
-    if not suggested_topics:
-        return html.Small("No topics found", className="text-muted")
-    
-    buttons = []
-    for topic in suggested_topics:
-        buttons.append(
-            dbc.Button(
-                topic,
-                id={'type': 'select-topic-btn', 'topic': topic},
-                color="success",
-                outline=True,
-                size="sm",
-                className='me-2'
-            )
-        )
-    
-    return html.Div(
-    buttons,
-    style={'display': 'inline-flex', 'gap': '8px', 'paddingBottom': '12px'}
-)
-
-# Seleziona il topic cliccato e popola dropdown
-@callback(
-    Output('topic-dropdown', 'value'),
-    Output('suggest-input', 'value'),
-    Output('suggested-topics-buttons', 'children'),
-    Input({'type': 'select-topic-btn', 'topic': dash.dependencies.ALL}, 'n_clicks'),
-    prevent_initial_call=True
-)
-def select_topic(n_clicks_list):
-    ctx = dash.callback_context
-    
-    if not ctx.triggered or not any(n_clicks_list):
-        raise dash.exceptions.PreventUpdate
-    
-    button_id = eval(ctx.triggered[0]['prop_id'].split('.')[0])
-    selected_topic = button_id['topic']
-       
-    return selected_topic, None, []
-
 @callback(
     Output('topic-card-container', 'children'),
     Output('topics-data', 'data'),

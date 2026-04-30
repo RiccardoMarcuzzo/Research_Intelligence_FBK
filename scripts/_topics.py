@@ -1,67 +1,15 @@
 import plotly.graph_objects as go
 
 from dash import dcc, html
-from utils import labels_pkl, org_topics_df, TOPIC_IDS, TOPIC_EMBS, EU_COUNTRY_CODES
+from utils import org_topics_df, topic_names, EU_COUNTRY_CODES
 
 import numpy as np
 import pandas as pd
-import torch
 import io
-from sklearn.metrics.pairwise import cosine_similarity
 
-from transformers import AutoTokenizer
-from optimum.onnxruntime import ORTModelForFeatureExtraction
-
-_rank_tokenizer = None
-_rank_model = None
-
-topic_names = labels_pkl.values()
 def update_dropdown(search_value):
     filtered = [t for t in topic_names if search_value.lower() in t.lower()][:20]
     return [{'label': top, 'value': top} for top in filtered]
-
-def get_rank_model():
-    global _rank_tokenizer, _rank_model
-    if _rank_model is None:
-        print("Caricamento RANK model...")  # utile per il log del server
-        _rank_tokenizer = AutoTokenizer.from_pretrained('data/specter2-onnx')
-        _rank_model = ORTModelForFeatureExtraction.from_pretrained(
-            'data/specter2-onnx', provider='CPUExecutionProvider'
-        )
-    return _rank_tokenizer, _rank_model
-
-def normalize_score(score):
-    return (score - np.min(score)) / (np.max(score) - np.min(score) + 1e-9)
-
-def suggest_topic(query):
-    query = query.title().strip()
-    if query == '':
-        return []
-    elif query in topic_names:
-        return [query]
-    else:
-        tokenizer, model = get_rank_model()
-        inputs = tokenizer(
-            query,
-            padding=True,
-            truncation=True,
-            return_tensors="pt",
-            max_length=512
-        )
-        
-        inputs.pop("token_type_ids", None)
-
-        with torch.no_grad():
-            output = model(**inputs)
-        
-        query_emb = output.last_hidden_state[:, 0, :].numpy()
-        
-        cos_scores = cosine_similarity(query_emb, TOPIC_EMBS)[0]
-        final_scores = normalize_score(cos_scores)
-
-        best_indices = np.argsort(final_scores)[::-1][:3]
-        
-        return [TOPIC_IDS[idx] for idx in best_indices]
 
 def populate_kpis(project_df):
 

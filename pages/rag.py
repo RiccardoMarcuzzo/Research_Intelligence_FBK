@@ -1,7 +1,7 @@
 import dash
 import math
 import dash_bootstrap_components as dbc
-from dash import dcc, html, Input, Output, State, ctx, callback, clientside_callback, ALL
+from dash import dcc, html, Input, Output, State, ctx, callback, ALL
 
 from utils import TITLE, COUNTRY_CODES, topic_names
 import scripts._rag as script
