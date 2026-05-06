@@ -8,7 +8,7 @@ from optimum.onnxruntime import ORTModelForFeatureExtraction
 
 from utils import org_topics_df, projects_df, RAG_EMBS
 
-THRESHOLD = 0.55
+THRESHOLD = 0.57
 _rag_tokenizer = None
 _rag_model = None
 
@@ -123,8 +123,9 @@ def build_accordion_items(*args):
         body = html.Div([
             html.P([html.Strong("Participants: "), ', '.join(row['participants'])]),
             html.P([html.Strong("Objective: "), row['objective']]),
-            html.P([html.Strong("Deliverables  "), *deliverables]),            
-        ])
+            html.P([html.Strong("Deliverables:  "), *deliverables]) if deliverables else '',
+            html.P([html.Strong("Publications: "), 'TO-DO'])        
+        ], style={'textAlign': 'left'})
         accordion_items.append(
             dbc.AccordionItem(body, title=header, item_id=str(row['projectID']))
         )
