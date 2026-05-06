@@ -165,40 +165,61 @@ layout = dbc.Container(
         ),
 
         # === RETRIEVED PROJECTS SECTION ===
-        html.Div([
-            html.Div(id='pagination-info', className="text-muted", style={'fontSize': '0.85rem'}),
-            html.Div([
-                dbc.Button("← Prev", id="btn-prev-page", size="sm", color="secondary",
-                        outline=True, disabled=True, className="me-2"),
-                dbc.Button("Next →", id="btn-next-page", size="sm", color="secondary",
-                        outline=True, disabled=True),
-            ], className="d-flex align-items-center")
-        ], id='pagination-controls',
-        className="d-flex justify-content-between align-items-center px-1 py-2 mt-2",
-        style={'display': 'none'}
-        ), 
-
         dcc.Store(id='store-current-page', data=0),
 
         html.Div(
-            id='results-section',
+            id='results-tabs-container',
+            style={'display': 'none'},
             children=[
-                html.P(
-                    "No documents retrieved",
-                    className="text-muted fst-italic",
-                    style={'fontSize': '0.9rem'}
-                )
-            ],
-            style={
-                'backgroundColor': "#ffffffc9",
-                'borderRadius': '8px',
-                'width': '100%',
-                'padding': '2rem',
-                'textAlign': 'center',
-                'color': 'black',
-            },
-            className="mt-4"
-        ),
+                dbc.Tabs(
+                    id='results-tabs',
+                    active_tab='tab-projects',
+                    className="mt-4",
+                    children=[
+                        # TAB 1 – Projects list
+                        dbc.Tab(label='Projects list', tab_id='tab-projects', children=[
+                            html.Div([
+                                html.Div(id='pagination-info', className="text-muted",
+                                        style={'fontSize': '0.85rem'}),
+                                html.Div([
+                                    dbc.Button("← Prev", id="btn-prev-page", size="sm",
+                                            color="secondary", outline=True,
+                                            disabled=True, className="me-2"),
+                                    dbc.Button("Next →", id="btn-next-page", size="sm",
+                                            color="secondary", outline=True, disabled=True),
+                                ], className="d-flex align-items-center")
+                            ], id='pagination-controls',
+                            className="d-flex justify-content-between align-items-center px-1 py-2 mt-2",
+                            style={'display': 'none'}
+                            ),
+                            html.Div(
+                                id='results-section',
+                                children=[html.P("No documents retrieved",
+                                                className="text-muted fst-italic",
+                                                style={'fontSize': '0.9rem'})],
+                                style={
+                                    'backgroundColor': "#ffffffc9",
+                                    'borderRadius': '8px',
+                                    'width': '100%',
+                                    'padding': '2rem',
+                                    'textAlign': 'center',
+                                    'color': 'black',
+                                },
+                                className="mt-4"
+                            ),
+                        ]),
+
+                        # TAB 2 – Aggregated view
+                        dbc.Tab(label='Aggregated view', tab_id='tab-aggregated', children=[
+                            html.Div(id='aggregated-section', className="mt-4")
+                        ]),
+
+                        # TAB 3 – Latent space
+                        dbc.Tab(label='Latent space', tab_id='tab-latent', children=[
+                            html.Div(id='latent-section', className="mt-4")
+                ]),
+            ])
+        ]),
     ],
     id='rag-page',
     fluid=True,
@@ -246,6 +267,14 @@ def update_dropdown_org_filter(search_value, selected_orgs, countries, types):
 def reset_filters(n_clicks):
     return [], [], [], [], [], '', ['Enter your requests and click "Retrieve"']
 
+# === RETRIEVED PROJECTS SECTION ===
+@callback(
+    Output('results-tabs-container', 'style'),
+    Input('retrieve-button-proj', 'n_clicks'),
+    prevent_initial_call=True
+)
+def show_tabs(n_clicks):
+    return {'display': 'block'}
 
 @callback(
     Output('results-section', 'children'),
@@ -337,3 +366,39 @@ def update_page(prev_clicks, next_clicks, n_click, *filter_inputs_and_state):
         return max(0, current_page - 1)
     else:
         return 0
+
+# aggregated view
+@callback(
+    Output('aggregated-section', 'children'),
+    Input('retrieve-button-proj', 'n_clicks'),
+    State('fp-filter-proj', 'value'),
+    State('country-filter-proj', 'value'),
+    State('type-filter-proj', 'value'),
+    State('org-filter-proj', 'value'),
+    State('topic-filter-proj', 'value'),
+    State('user-input-proj', 'value'),
+    prevent_initial_call=True
+)
+def display_aggregated(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_list, user_input):
+    if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
+        return html.P("Enter your requests and click \"Retrieve\"")
+    
+    return script.build_aggregated_view(fp_list, country_list, typeorg_list, org_list, topic_list, user_input)
+
+# latent space
+@callback(
+    Output('latent-section', 'children'),
+    Input('retrieve-button-proj', 'n_clicks'),
+    State('fp-filter-proj', 'value'),
+    State('country-filter-proj', 'value'),
+    State('type-filter-proj', 'value'),
+    State('org-filter-proj', 'value'),
+    State('topic-filter-proj', 'value'),
+    State('user-input-proj', 'value'),
+    prevent_initial_call=True
+)
+def display_latent_space(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_list, user_input):
+    if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
+        return html.P("Enter your requests and click \"Retrieve\"")
+    
+    return script.build_latent_space(bool(user_input), fp_list, country_list, typeorg_list, org_list, topic_list, user_input)
