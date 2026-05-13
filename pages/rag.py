@@ -411,4 +411,4 @@ def display_latent_space(retrieved_projects, user_input):
             [html.P('Enter your requests and click "Retrieve"')]
         )
     
-    return build_latent_space(bool(user_input), retrieved_projects, user_input)
+    return build_latent_space(retrieved_projects, user_input)

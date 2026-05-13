@@ -5,9 +5,10 @@ import plotly.express as px
 
 from dash import html, dcc
 
-def build_latent_space(has_input_text, filtered_json, user_input):
+def build_latent_space(filtered_json, user_input):
 
     filtered_projects = pd.DataFrame(json.loads(filtered_json))
+    print(filtered_projects.head(5))
 
     np.random.seed(42)
     
@@ -34,7 +35,7 @@ def build_latent_space(has_input_text, filtered_json, user_input):
     })
 
     # 2. LOGICA DI COLORAZIONE
-    if has_input_text:
+    if user_input:
         # CASO TRUE: Gradiente Giallo -> Rosso
         custom_colorscale = [
             [0.0, "#E0E0E0"],   # Grigio
@@ -84,7 +85,7 @@ def build_latent_space(has_input_text, filtered_json, user_input):
     fig.update_traces(marker=dict(line=dict(width=0.5, color='DimGray')))
 
     # Messaggio di stato
-    status_text = "Visualizzazione basata sulla similarità testuale." if has_input_text else \
+    status_text = "Visualizzazione basata sulla similarità testuale." if user_input else \
                   "Visualizzazione basata sui filtri di ricerca (nessun testo inserito)."
 
     return html.Div([

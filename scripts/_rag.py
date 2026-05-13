@@ -98,4 +98,4 @@ def retrieve_active_indices(*args):
     if filtered_projects.empty:
         return ''
     
-    return filtered_projects.to_json(orient='records')
+    return filtered_projects.reset_index().to_json(orient='records')
