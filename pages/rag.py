@@ -5,6 +5,9 @@ from dash import dcc, html, Input, Output, State, ctx, callback, ALL
 
 from utils import TITLE, COUNTRY_CODES, topic_names
 import scripts._rag as script
+from scripts._rag__projects_list import build_accordion_items
+from scripts._rag__aggregated_view import build_aggregated_view
+from scripts._rag__latent_space import build_latent_space
 
 PAGE_TITLE = "RAG"
 
@@ -165,6 +168,7 @@ layout = dbc.Container(
         ),
 
         # === RETRIEVED PROJECTS SECTION ===
+        dcc.Store(id='retrieved-idx-store', data=''),
         dcc.Store(id='store-current-page', data=0),
 
         html.Div(
@@ -253,20 +257,6 @@ def update_dropdown_org_filter(search_value, selected_orgs, countries, types):
 
     return new_options
 
-@callback(
-    Output('fp-filter-proj', 'value'),
-    Output('country-filter-proj', 'value'),
-    Output('type-filter-proj', 'value'),
-    Output('org-filter-proj', 'value'),
-    Output('topic-filter-proj', 'value'),
-    Output('user-input-proj', 'value'),
-    Output('results-section', 'children', allow_duplicate=True),
-    Input('reset-button-proj', 'n_clicks'),
-    prevent_initial_call=True,
-)
-def reset_filters(n_clicks):
-    return [], [], [], [], [], '', ['Enter your requests and click "Retrieve"']
-
 # === RETRIEVED PROJECTS SECTION ===
 @callback(
     Output('results-tabs-container', 'style'),
@@ -277,26 +267,55 @@ def show_tabs(n_clicks):
     return {'display': 'block'}
 
 @callback(
-    Output('results-section', 'children'),
-    Output('store-current-page', 'data'),
-    Output('pagination-info', 'children'),
-    Output('btn-prev-page', 'disabled'),
-    Output('btn-next-page', 'disabled'),
-    Output('pagination-controls', 'style'),
+    Output('retrieved-idx-store', 'data'),
     Input('retrieve-button-proj', 'n_clicks'),
-    Input('btn-prev-page', 'n_clicks'),
-    Input('btn-next-page', 'n_clicks'),
     State('fp-filter-proj', 'value'),
     State('country-filter-proj', 'value'),
     State('type-filter-proj', 'value'),
     State('org-filter-proj', 'value'),
     State('topic-filter-proj', 'value'),
     State('user-input-proj', 'value'),
-    State('store-current-page', 'data'),
-
+    prevent_initial_call=True    
 )
-def display_projects(n_clicks, prev_clicks, next_clicks,
-                     fp_list, country_list, typeorg_list, org_list, topic_list, user_input, current_page):
+def retrieve_idx(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_list, user_input):
+
+    if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
+        return ''
+    
+    return script.retrieve_active_indices(
+        fp_list, country_list, typeorg_list, org_list, topic_list, user_input
+    )
+
+@callback(
+    Output('fp-filter-proj', 'value'),
+    Output('country-filter-proj', 'value'),
+    Output('type-filter-proj', 'value'),
+    Output('org-filter-proj', 'value'),
+    Output('topic-filter-proj', 'value'),
+    Output('user-input-proj', 'value'),
+    Output('results-section', 'children', allow_duplicate=True),
+    Output('retrieved-idx-store', 'data', allow_duplicate=True),
+    Input('reset-button-proj', 'n_clicks'),
+    prevent_initial_call=True,
+)
+def reset_filters(n_clicks):
+    return [], [], [], [], [], '', ['Enter your requests and click "Retrieve"'], ''
+
+# === TABS ===
+@callback(
+    Output('results-section', 'children'),
+    Output('store-current-page', 'data'),
+    Output('pagination-info', 'children'),
+    Output('btn-prev-page', 'disabled'),
+    Output('btn-next-page', 'disabled'),
+    Output('pagination-controls', 'style'),
+    Input('btn-prev-page', 'n_clicks'),
+    Input('btn-next-page', 'n_clicks'),
+    Input('retrieved-idx-store', 'data'),
+    State('store-current-page', 'data'),
+    prevent_initial_call = True
+)
+def display_projects(prev_clicks, next_clicks, retrieved_projects, current_page):
     triggered = ctx.triggered_id
 
     if triggered == 'btn-next-page':
@@ -306,15 +325,13 @@ def display_projects(n_clicks, prev_clicks, next_clicks,
     else:
         current_page = 0  # nuovo retrieve → reset
 
-    if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
+    if not retrieved_projects:
         return (
-            [html.P('Enter your requests and click "Retrieve"')], 
+            [html.P('Enter your requests and click "Retrieve"')],
             0, "", True, True, {'display': 'none'}
         )
 
-    accordion_items, total = script.build_accordion_items(
-        fp_list, country_list, typeorg_list, org_list, topic_list, user_input
-    )
+    accordion_items, total = build_accordion_items(retrieved_projects)
 
     if not accordion_items:
         return (
@@ -370,35 +387,28 @@ def update_page(prev_clicks, next_clicks, n_click, *filter_inputs_and_state):
 # aggregated view
 @callback(
     Output('aggregated-section', 'children'),
-    Input('retrieve-button-proj', 'n_clicks'),
-    State('fp-filter-proj', 'value'),
-    State('country-filter-proj', 'value'),
-    State('type-filter-proj', 'value'),
-    State('org-filter-proj', 'value'),
-    State('topic-filter-proj', 'value'),
-    State('user-input-proj', 'value'),
+    Input('retrieved-idx-store', 'data'),
     prevent_initial_call=True
 )
-def display_aggregated(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_list, user_input):
-    if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
-        return html.P("Enter your requests and click \"Retrieve\"")
+def display_aggregated(retrieved_projects):
+    if not retrieved_projects:
+        return (
+            [html.P('Enter your requests and click "Retrieve"')]
+        )
     
-    return script.build_aggregated_view(fp_list, country_list, typeorg_list, org_list, topic_list, user_input)
+    return build_aggregated_view(retrieved_projects)
 
 # latent space
 @callback(
     Output('latent-section', 'children'),
-    Input('retrieve-button-proj', 'n_clicks'),
-    State('fp-filter-proj', 'value'),
-    State('country-filter-proj', 'value'),
-    State('type-filter-proj', 'value'),
-    State('org-filter-proj', 'value'),
-    State('topic-filter-proj', 'value'),
+    Input('retrieved-idx-store', 'data'),
     State('user-input-proj', 'value'),
     prevent_initial_call=True
 )
-def display_latent_space(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_list, user_input):
-    if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
-        return html.P("Enter your requests and click \"Retrieve\"")
+def display_latent_space(retrieved_projects, user_input):
+    if not retrieved_projects:
+        return (
+            [html.P('Enter your requests and click "Retrieve"')]
+        )
     
-    return script.build_latent_space(bool(user_input), fp_list, country_list, typeorg_list, org_list, topic_list, user_input)
+    return build_latent_space(bool(user_input), retrieved_projects, user_input)
