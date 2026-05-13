@@ -16,12 +16,12 @@ app = dash.Dash(
 @app.server.route("/")
 def redirect_root():
     from flask import redirect
-    return redirect(base_path)
+    return redirect(f'{base_path}/projects')
 
 NAVBAR = {
-    "Topics":        {"relative_path": f"{base_path}"},
-    "Organisations": {"relative_path": f"{base_path}organisations"},
     "Projects":        {"relative_path": f"{base_path}projects"},
+    "Topics":        {"relative_path": f"{base_path}topics"},
+    "Organisations": {"relative_path": f"{base_path}organisations"},
     "Concept":       {"relative_path": f"{base_path}concept"},
 }
 

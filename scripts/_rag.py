@@ -92,7 +92,7 @@ def build_accordion_items(*args):
     if user_input:
         filtered_embs = RAG_EMBS[active_indices]
         query_emb = encode(user_input, max_length=8192).reshape(1, -1)
-        cos_scores = (filtered_embs @ query_emb.T).ravel()        
+        cos_scores = (filtered_embs @ query_emb.T).ravel()
    
         valid = cos_scores > THRESHOLD
         original_indices = np.where(valid)[0]

@@ -13,7 +13,7 @@ dash.register_page(
     name=PAGE_TITLE,
     title=f"{PAGE_TITLE} | {TITLE}",
     path='/projects',
-    order=2
+    order=0
 )
 
 #--------------------------------------------

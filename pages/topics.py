@@ -11,8 +11,8 @@ dash.register_page(
     __name__,
     name=PAGE_TITLE,
     title=f"{PAGE_TITLE} | {TITLE}",
-    path='/',
-    order=0
+    path='/topics',
+    order=2
 )
 
 DEFAULT_TOPIC = 'Natural Language Processing'
