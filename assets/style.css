@@ -107,54 +107,6 @@
 
 /* --- REGOLE SOLO PER LA PAGINA ASK AI --- */
 
-/* Dropdown: bordo quando focalizzato o aperto */
-#rag-page .Select-control:hover {
-    border-color: #cc3030 !important;
-}
-
-#rag-page .is-focused:not(.is-open) > .Select-control {
-    border-color: #cc3030 !important;
-    box-shadow: 0 0 0 1px rgba(167, 40, 40, 0.25) !important;
-}
-
-#rag-page .is-open > .Select-control {
-    border-color: #cc3030 !important;
-}
-
-/* Colore dell'opzione evidenziata nel menu a tendina */
-#rag-page .VirtualizedSelectFocusedOption {
-    background-color: rgba(167, 40, 40, 0.15) !important;
-    color: #de4949 !important;
-}
-
-/* Bordo del contenitore principale nel multi-dropdown */
-#rag-page .Select--multi .Select-control {
-    border-color: #d1d1d1; /* Colore base a riposo */
-}
-
-#rag-page .Select--multi.is-focused .Select-control {
-    border-color: #cc3030 !important;
-    box-shadow: 0 0 0 1px rgba(167, 40, 40, 0.25) !important;
-}
-
-/* Colore dei "Tag" (le opzioni selezionate come FP1, FP2...) */
-#rag-page .Select--multi .Select-value {
-    background-color: rgba(167, 40, 40, 0.1) !important; /* Fondo verde chiarissimo */
-    border: 1px solid #cc3030 !important; /* Bordo verde */
-    color: #cc3030 !important; /* Testo verde */
-}
-
-/* Colore della "X" per rimuovere il tag */
-#rag-page .Select--multi .Select-value-icon {
-    border-right: 1px solid rgba(167, 40, 40, 0.5) !important;
-    color: #cc3030 !important;
-}
-
-#rag-page .Select--multi .Select-value-icon:hover {
-    background-color: rgba(167, 40, 40, 0.2) !important;
-    color: #de4949 !important;
-}
-
 /* Separatore netto tra items accordion */
 .projects-accordion .accordion-item {
     border-bottom: 1px solid #dee2e6 !important;

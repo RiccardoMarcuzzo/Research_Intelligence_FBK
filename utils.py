@@ -25,6 +25,7 @@ orgs_df      = pd.read_parquet('data/orgs.parquet')
 topics_df    = pd.read_parquet('data/topics.parquet', 
                                columns=['level_1', 'level_2', 'level_3', 'level_4', 'count'])
 org_topics_df = pd.read_parquet('data/org_topics.parquet')
+org_projects_df = pd.read_parquet('data/org_projects.parquet')
 
 with open('data/labels.pkl', 'rb') as f:
     labels_pkl = pickle.load(f)

@@ -11,6 +11,7 @@ app = dash.Dash(
     use_pages=True,
     routes_pathname_prefix=base_path,
     requests_pathname_prefix=base_path,
+    suppress_callback_exceptions=True
 )
 
 @app.server.route("/")

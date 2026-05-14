@@ -6,7 +6,7 @@ from dash import dcc, html, Input, Output, State, ctx, callback, ALL
 from utils import TITLE, COUNTRY_CODES, topic_names
 import scripts._rag as script
 from scripts._rag__projects_list import build_accordion_items
-from scripts._rag__aggregated_view import build_aggregated_view
+from scripts._rag__aggregated_view import build_aggregated_view, build_aggregated_graphs
 from scripts._rag__latent_space import build_latent_space
 
 PAGE_TITLE = "RAG"
@@ -68,11 +68,11 @@ layout = dbc.Container(
                         dcc.Dropdown(
                             id='type-filter-proj',
                             options=[
-                                {'label': 'Research organisation', 'value': 'REC'},
-                                {'label': 'Higher education establishment', 'value': 'HES'},
-                                {'label': 'Private for profit companies', 'value': 'PRC'},
-                                {'label': 'Public bodies', 'value': 'PUB'},
-                                {'label': 'Other', 'value': 'OTH'},
+                                {'label': 'Research organisation (REC)', 'value': 'REC'},
+                                {'label': 'Higher education establishment (HES)', 'value': 'HES'},
+                                {'label': 'Private for profit companies (PRC)', 'value': 'PRC'},
+                                {'label': 'Public bodies (PUB)', 'value': 'PUB'},
+                                {'label': 'Other (OTH)', 'value': 'OTH'},
                             ],
                             value=[],
                             multi=True,
@@ -88,6 +88,7 @@ layout = dbc.Container(
                         dcc.Dropdown(
                             id='org-filter-proj',
                             options=[],
+                            value=[],
                             multi=True,
                             placeholder='Select organisations...',
                         ),
@@ -130,7 +131,7 @@ layout = dbc.Container(
                         "Reset Filters",
                         id="reset-button-proj",
                         outline=True,
-                        color="danger",
+                        color="primary",
                         className="w-100",
                         size="lg",
                         style={'borderRadius': '8px'},
@@ -141,7 +142,7 @@ layout = dbc.Container(
                     dbc.Button(
                         "Retrieve",
                         id="retrieve-button-proj",
-                        color="danger",
+                        color="primary",
                         className="w-100",
                         size="lg",
                         style={'borderRadius': '8px'},
@@ -160,7 +161,7 @@ layout = dbc.Container(
                 dcc.Link(
                     ['documentation.', html.I(className="bi bi-box-arrow-up-right ms-2")],
                     href='concept',
-                    className='text-decoration-none link-danger'
+                    className='text-decoration-none link-primary'
                 )
             ],
             className="text-muted mt-2",
@@ -170,6 +171,7 @@ layout = dbc.Container(
         # === RETRIEVED PROJECTS SECTION ===
         dcc.Store(id='retrieved-idx-store', data=''),
         dcc.Store(id='store-current-page', data=0),
+        dcc.Store(id='agg-store', data=''),
 
         html.Div(
             id='results-tabs-container',
@@ -387,16 +389,31 @@ def update_page(prev_clicks, next_clicks, n_click, *filter_inputs_and_state):
 # aggregated view
 @callback(
     Output('aggregated-section', 'children'),
+    Output("agg-store", "data"), 
     Input('retrieved-idx-store', 'data'),
+    State('country-filter-proj', 'value'),
+    State('type-filter-proj', 'value'),
+    State('org-filter-proj', 'value'),
+    State('topic-filter-proj', 'value'),
     prevent_initial_call=True
 )
-def display_aggregated(retrieved_projects):
+def display_aggregated(retrieved_projects, country_list, typeorg_list, org_list, topic_list):
     if not retrieved_projects:
         return (
             [html.P('Enter your requests and click "Retrieve"')]
-        )
+        ), ''
     
-    return build_aggregated_view(retrieved_projects)
+    return build_aggregated_view(retrieved_projects, country_list, typeorg_list, org_list, topic_list)
+
+@callback(
+    Output("agg-graph-container", "children"),
+    Input("coordinator-toggle", "value"),
+    Input("metrics-radio",  "value"),
+    Input("agg-store",  "data"),
+    prevent_initial_call=True
+)
+def update_agg_graph(toggle_value, radio_value, stored_data):
+    return build_aggregated_graphs(toggle_value, radio_value, stored_data)
 
 # latent space
 @callback(

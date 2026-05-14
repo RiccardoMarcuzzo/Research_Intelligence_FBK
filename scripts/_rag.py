@@ -69,7 +69,7 @@ def retrieve_active_indices(*args):
     if org_list:
         match = projects_df['participants'].apply(lambda x: bool(set(x) & set(org_list))).to_numpy()
         active_indices = active_indices[match[active_indices]]
-    else:
+    else: # TODO: i due filtri non funzionano in sinergia, perché basta che 1 partecipante sia di un certo type (anche se di un'altra nazione) e il filtro sul type_org restituisce comunque True
         if country_list:
             match = projects_df['participants_country_code'].apply(lambda x: bool(set(x) & set(country_list))).to_numpy()
             active_indices = active_indices[match[active_indices]]

@@ -211,7 +211,7 @@ layout = html.Div([
                     html.Div([
                         dcc.Link(
                             dbc.Button("Explore Topics →", color="success", className="w-100 mt-3"),
-                            href=base_path
+                            href="topics"
                         )
                     ])
                 ])
@@ -297,7 +297,7 @@ layout = html.Div([
                     html.Div([
                         dcc.Link(
                             dbc.Button("Explore Projects →", color="danger", className="w-100 mt-3"),
-                            href="askAI"
+                            href="projects"
                         )
                     ])
                 ])

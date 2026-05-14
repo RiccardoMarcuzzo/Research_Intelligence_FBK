@@ -8,7 +8,6 @@ from dash import html, dcc
 def build_latent_space(filtered_json, user_input):
 
     filtered_projects = pd.DataFrame(json.loads(filtered_json))
-    print(filtered_projects.head(5))
 
     np.random.seed(42)
     

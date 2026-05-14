@@ -24,7 +24,7 @@ def build_accordion_items(filtered_json):
                 html.Small(f"{proj_fp}  ·  {proj_hier}", className="text-muted"),
                 html.Br(),
                 html.A("View on CORDIS ↗", href=cordis_url, target="_blank",
-                    className="text-danger", style={'fontSize': '0.8rem', 'textDecoration': 'none'}),
+                    className="text-primary", style={'fontSize': '0.8rem', 'textDecoration': 'none'}),
             ], className="mt-1")
         ])
         body = html.Div([
