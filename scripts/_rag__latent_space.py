@@ -1,13 +1,13 @@
-import json
 import pandas as pd
 import numpy as np
 import plotly.express as px
 
 from dash import html, dcc
+from utils import projects_df
 
-def build_latent_space(filtered_json, user_input):
+def build_latent_space(active_indices, user_input):
 
-    filtered_projects = pd.DataFrame(json.loads(filtered_json))
+    data = projects_df.iloc[active_indices]
 
     np.random.seed(42)
     

@@ -56,7 +56,7 @@ def encode(text, max_length=8192):
     
     return embeddings.detach().cpu().numpy()
 
-def retrieve_active_indices_n(*args):
+def retrieve_active_indices(*args):
     fp_list, country_list, typeorg_list, org_list, topic_list, user_input = args
 
     filters = {
@@ -71,10 +71,12 @@ def retrieve_active_indices_n(*args):
         if lst:
             mask &= org_projects_df[col].isin(lst)
 
-    valid_ids = set(org_projects_df.loc[mask, 'projectID'])  # set per O(1) lookup
+    masked_org = org_projects_df.loc[mask]
+    valid_ids = set(masked_org['projectID'])
+    coordinator_ids = set(masked_org.loc[masked_org['role'] == 'coordinator', 'projectID'])
 
     if not valid_ids:
-        return ''
+        return [], []
 
     match = projects_df['projectID'].isin(valid_ids).to_numpy()
     active_indices = np.where(match)[0]
@@ -86,53 +88,13 @@ def retrieve_active_indices_n(*args):
 
         valid_mask = cos_scores > THRESHOLD
         if not valid_mask.any():
-            return ''
+            return [], []
         active_indices = active_indices[valid_mask]
         active_indices = active_indices[np.argsort(cos_scores[valid_mask])[::-1]]
 
-    filtered_projects = projects_df.iloc[active_indices]
-    return '' if filtered_projects.empty else filtered_projects.reset_index().to_json(orient='records')
+    coordinator_match = projects_df['projectID'].isin(coordinator_ids).to_numpy()
+    coordinator_match_set = set(np.where(coordinator_match)[0])
 
-def retrieve_active_indices(*args):
-    fp_list, country_list, typeorg_list, org_list, topic_list, user_input = args
+    coordinator_indices = [i for i in active_indices if i in coordinator_match_set]
 
-    active_indices = np.arange(len(projects_df))
-
-    if fp_list:
-        match = projects_df['fp'].isin(fp_list).to_numpy()
-        active_indices = active_indices[match[active_indices]]
-
-    # Filtro geografico: bypassa countrylist e typeorglist se è presente almeno una organizzazione       
-    if org_list:
-        match = projects_df['participants'].apply(lambda x: bool(set(x) & set(org_list))).to_numpy()
-        active_indices = active_indices[match[active_indices]]
-    else: # TODO: i due filtri non funzionano in sinergia, perché basta che 1 partecipante sia di un certo type (anche se di un'altra nazione) e il filtro sul type_org restituisce comunque True
-        if country_list:
-            match = projects_df['participants_country_code'].apply(lambda x: bool(set(x) & set(country_list))).to_numpy()
-            active_indices = active_indices[match[active_indices]]
-        if typeorg_list:
-            match = projects_df['participants_type_org'].apply(lambda x: bool(set(x) & set(typeorg_list))).to_numpy()
-            active_indices = active_indices[match[active_indices]]
-        pass
-
-    if topic_list:
-        match = projects_df['topic_name_hierarchy'].apply(lambda x: bool(set(x) & set(topic_list))).to_numpy()
-        active_indices = active_indices[match[active_indices]]
-
-    if user_input:
-        filtered_embs = RAG_EMBS[active_indices]
-        query_emb = encode(user_input, max_length=8192).reshape(1, -1)
-        cos_scores = (filtered_embs @ query_emb.T).ravel()
-   
-        valid = cos_scores > THRESHOLD
-        original_indices = np.where(valid)[0]
-        best_indices = np.argsort(cos_scores[original_indices])[::-1]
-        best_indices = original_indices[best_indices]
-
-        active_indices = active_indices[best_indices]
-
-    filtered_projects = projects_df.iloc[active_indices]
-    if filtered_projects.empty:
-        return ''
-    
-    return filtered_projects.reset_index().to_json(orient='records')
+    return active_indices, coordinator_indices

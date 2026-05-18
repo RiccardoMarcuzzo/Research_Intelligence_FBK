@@ -20,7 +20,7 @@ def redirect_root():
     return redirect(f'{base_path}/projects')
 
 NAVBAR = {
-    "Projects":        {"relative_path": f"{base_path}projects"},
+    "Projects":      {"relative_path": f"{base_path}projects"},
     "Topics":        {"relative_path": f"{base_path}topics"},
     "Organisations": {"relative_path": f"{base_path}organisations"},
     "Concept":       {"relative_path": f"{base_path}concept"},

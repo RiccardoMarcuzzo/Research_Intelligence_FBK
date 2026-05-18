@@ -150,7 +150,20 @@ layout = dbc.Container(
                     width=2
                 ),
             ],
-            className="mb-4 g-2",
+            className="mb-3 g-2",
+            align="center"
+        ),
+        # === ROW 3: COORDINATOR SWITCH ===
+        dbc.Row(
+            [
+                    dbc.Switch(
+                        id="coordinator-toggle",
+                        label="Show coordinator only",
+                        value=False,
+                        className="mt-2 mb-3"
+                    ),
+            ],
+            className="g-2",
             align="center"
         ),
 
@@ -164,15 +177,16 @@ layout = dbc.Container(
                     className='text-decoration-none link-primary'
                 )
             ],
-            className="text-muted mt-2",
+            className="text-muted",
             style={'fontSize': '0.9rem'}
         ),
 
         # === RETRIEVED PROJECTS SECTION ===
-        dcc.Store(id='retrieved-idx-store', data=''),
+        dcc.Store(id='retrieved-idx-store', data=[]),
+        dcc.Store(id='coordinator-idx-store', data=[]),
         dcc.Store(id='store-current-page', data=0),
         dcc.Store(id='agg-store', data=''),
-
+        
         html.Div(
             id='results-tabs-container',
             style={'display': 'none'},
@@ -224,7 +238,7 @@ layout = dbc.Container(
                         dbc.Tab(label='Latent space', tab_id='tab-latent', children=[
                             html.Div(id='latent-section', className="mt-4")
                 ]),
-            ])
+            ]),
         ]),
     ],
     id='rag-page',
@@ -270,6 +284,7 @@ def show_tabs(n_clicks):
 
 @callback(
     Output('retrieved-idx-store', 'data'),
+    Output('coordinator-idx-store', 'data'),
     Input('retrieve-button-proj', 'n_clicks'),
     State('fp-filter-proj', 'value'),
     State('country-filter-proj', 'value'),
@@ -282,9 +297,9 @@ def show_tabs(n_clicks):
 def retrieve_idx(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_list, user_input):
 
     if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
-        return ''
+        return [], []
     
-    return script.retrieve_active_indices_n(
+    return script.retrieve_active_indices(
         fp_list, country_list, typeorg_list, org_list, topic_list, user_input
     )
 
@@ -313,11 +328,13 @@ def reset_filters(n_clicks):
     Output('pagination-controls', 'style'),
     Input('btn-prev-page', 'n_clicks'),
     Input('btn-next-page', 'n_clicks'),
+    Input("coordinator-toggle", "value"),
     Input('retrieved-idx-store', 'data'),
+    Input('coordinator-idx-store', 'data'),
     State('store-current-page', 'data'),
     prevent_initial_call = True
 )
-def display_projects(prev_clicks, next_clicks, retrieved_projects, current_page):
+def display_projects(prev_clicks, next_clicks, is_coordinator, retrieved_projects, coordinator_projects, current_page):
     triggered = ctx.triggered_id
 
     if triggered == 'btn-next-page':
@@ -325,7 +342,7 @@ def display_projects(prev_clicks, next_clicks, retrieved_projects, current_page)
     elif triggered == 'btn-prev-page':
         current_page = max(0, (current_page or 0) - 1)
     else:
-        current_page = 0  # nuovo retrieve → reset
+        current_page = 0
 
     if not retrieved_projects:
         return (
@@ -333,7 +350,7 @@ def display_projects(prev_clicks, next_clicks, retrieved_projects, current_page)
             0, "", True, True, {'display': 'none'}
         )
 
-    accordion_items, total = build_accordion_items(retrieved_projects)
+    accordion_items, total = build_accordion_items(is_coordinator, retrieved_projects, coordinator_projects)
 
     if not accordion_items:
         return (
@@ -391,29 +408,30 @@ def update_page(prev_clicks, next_clicks, n_click, *filter_inputs_and_state):
     Output('aggregated-section', 'children'),
     Output("agg-store", "data"), 
     Input('retrieved-idx-store', 'data'),
+    Input('coordinator-idx-store', 'data'),
+    Input("coordinator-toggle", "value"),    
     State('country-filter-proj', 'value'),
     State('type-filter-proj', 'value'),
     State('org-filter-proj', 'value'),
     State('topic-filter-proj', 'value'),
     prevent_initial_call=True
 )
-def display_aggregated(retrieved_projects, country_list, typeorg_list, org_list, topic_list):
+def display_aggregated(retrieved_projects, coordinator_projects, is_coordinator, country_list, typeorg_list, org_list, topic_list):
     if not retrieved_projects:
         return (
             [html.P('Enter your requests and click "Retrieve"')]
         ), ''
     
-    return build_aggregated_view(retrieved_projects, country_list, typeorg_list, org_list, topic_list)
+    return build_aggregated_view(retrieved_projects, coordinator_projects, is_coordinator, country_list, typeorg_list, org_list, topic_list)
 
 @callback(
     Output("agg-graph-container", "children"),
-    Input("coordinator-toggle", "value"),
     Input("metrics-radio",  "value"),
     Input("agg-store",  "data"),
     prevent_initial_call=True
 )
-def update_agg_graph(toggle_value, radio_value, stored_data):
-    return build_aggregated_graphs(toggle_value, radio_value, stored_data)
+def update_agg_graph(radio_value, stored_data):
+    return build_aggregated_graphs(radio_value, stored_data)
 
 # latent space
 @callback(
@@ -429,3 +447,9 @@ def display_latent_space(retrieved_projects, user_input):
         )
     
     return build_latent_space(retrieved_projects, user_input)
+
+"""
+Input("coordinator-toggle", "value"),
+if is_coordinator:
+    data = data[data['role'] == 'coordinator
+"""
