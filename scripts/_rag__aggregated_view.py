@@ -137,6 +137,44 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
 
     return html.Div(children=[kpi_row, controls_row, graph_area], id="aggregated-view"), data.to_json(orient='records')
 
+def build_graph(data, by_col, metric_col, metric_text):
+    graph_data = (data.groupby(by=by_col, as_index=False)
+                    .agg({
+                        'projectID': lambda x: x.explode().nunique(),
+                        'netEcContribution': 'sum',
+                        'name': 'nunique'
+                    })
+                    .sort_values(metric_col, ascending=True))
+    graph_data['custom_hover'] = (
+        '<b>' + graph_data[by_col].astype(str) + '</b><br><i>' +
+        graph_data['projectID'].astype(str) + ' projects<br>' +
+        graph_data['netEcContribution'].astype(str) + ' € funded<br>' +
+        graph_data['name'].astype(str) + ' organisations<br>'
+    )
+    if by_col == 'activityType':
+        graph_fig = px.pie(
+            graph_data, 
+            values=metric_col, 
+            names=by_col, 
+            title=f"{metric_text} per Activity Type",
+            hole=0.4,
+        )
+    else:
+        graph_fig = px.bar(
+            data_frame=graph_data, 
+            x=metric_col, 
+            y=by_col, 
+            orientation='h',
+            title=f"{metric_text} per Country",
+            color=metric_col,
+            color_continuous_scale="Viridis",
+            template="plotly_white",
+        )
+    graph_fig.update_traces(hovertemplate=graph_data['custom_hover'])
+    graph_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20))
+    
+    return graph_fig
+
 def build_aggregated_graphs(metric, data):
     data = pd.DataFrame(json.loads(data))
 
@@ -156,37 +194,16 @@ def build_aggregated_graphs(metric, data):
         'org': {'col': 'name', 'text': 'Number of organisations'}
     }
 
+    col = metric_metadata[metric]['col']
+    text = metric_metadata[metric]['text']
+
     charts = []
     if data['countryCode'].explode().nunique() > 1:
-        country_data = (data.groupby(by='countryCode', as_index=False)
-                        .agg(agg_func[metric])
-                        .rename(columns={metric_metadata[metric]['col']: 'value'}))
-        country_fig = px.bar(
-            country_data, 
-            x="value", 
-            y="countryCode", 
-            orientation='h',
-            title=f"{metric_metadata[metric]['text']} per Country",
-            color="value",
-            color_continuous_scale="Viridis",
-            template="plotly_white",
-        )
-        country_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), showlegend=False)
+        country_fig = build_graph(data, 'countryCode', col, text)
         charts.append({'fig': country_fig, 'id': 'agg_countries'})
 
     if data['activityType'].explode().nunique() > 1:
-        type_data = (data.groupby(by='activityType', as_index=False)
-                     .agg(agg_func[metric])
-                     .rename(columns={metric_metadata[metric]['col']: 'value'}))
-        type_fig = px.pie(
-            type_data, 
-            values='value', 
-            names='activityType', 
-            title=f"{metric_metadata[metric]['text']} per Activity Type",
-            hole=0.4,
-        )
-        type_fig.update_traces(textinfo='percent+label')
-        type_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20))
+        type_fig = build_graph(data, 'activityType', col, text)
         charts.append({'fig': type_fig, 'id': 'agg_types'})
      
     col_width = {"size": 8, "offset": 2} if len(charts) == 1 else None
@@ -199,38 +216,34 @@ def build_aggregated_graphs(metric, data):
 
     if metric != 'org' and data['name'].explode().nunique() > 1:
         org_data = (data.groupby(by='name', as_index=False)
-                        .agg(agg_func[metric])
-                        .rename(columns={metric_metadata[metric]['col']: 'value'}))
+                        .agg({
+                            'projectID': lambda x: x.explode().nunique(),
+                            'netEcContribution': 'sum',
+                        })
+                        .sort_values(col, ascending=True))
+        org_data['custom_hover'] = (
+            '<b>' + org_data['name'].astype(str) + '</b><br><i>' +
+            org_data['projectID'].astype(str) + ' projects<br>' +
+            org_data['netEcContribution'].astype(str) + ' € funded<br>'
+        )
         org_fig = px.bar(
             org_data, 
-            x="value", 
+            x=col, 
             y="name", 
             orientation='h',
-            title=f"{metric_metadata[metric]['text']} per Organisation",
-            color="value",
+            title=f"{text} per Organisation",
+            color=col,
             color_continuous_scale="Viridis",
             template="plotly_white",
         )
+        org_fig.update_traces(hovertemplate=org_data['custom_hover'])
         org_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), showlegend=False)
         layout.append(dbc.Row(
             dbc.Col(dcc.Graph(figure=org_fig, id='agg_orgs'), width={"size": 8, "offset": 2}, xs=12, lg=12))
         )
 
     if data['topic_name'].explode().nunique() > 1:
-        topic_data = (data.groupby(by='topic_name', as_index=False)
-                        .agg(agg_func[metric])
-                        .rename(columns={metric_metadata[metric]['col']: 'value'}))
-        topic_fig = px.bar(
-            topic_data, 
-            x="value", 
-            y="topic_name", 
-            orientation='h',
-            title=f"{metric_metadata[metric]['text']} per Topic",
-            color="value",
-            color_continuous_scale="Viridis",
-            template="plotly_white",
-        )
-        topic_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), showlegend=False)
+        topic_fig = build_graph(data, 'topic_name', col, text)
         layout.append(dbc.Row(
             dbc.Col(dcc.Graph(figure=topic_fig, id='agg_topics'), width={"size": 8, "offset": 2}, xs=12, lg=12))
         )
