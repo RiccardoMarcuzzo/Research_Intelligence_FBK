@@ -57,6 +57,8 @@ def build_kpi_row(all_fp, tot_proj, all_country, all_typeorg, all_org, all_topic
         """Restituisce il valore stringa se unico, altrimenti il conteggio int."""
         if len(arr) == 1:
             return str(arr[0])
+        elif len(arr) == 0:
+            return '0'
         return len(arr)
 
     fp_dict = {'8': "Horizon 2020", '9': "Horizon Europe"}
@@ -138,12 +140,24 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
     return html.Div(children=[kpi_row, controls_row, graph_area], id="aggregated-view"), data.to_json(orient='records')
 
 def build_graph(data, by_col, metric_col, metric_text):
+    agg_dict = {
+        'projectID': lambda x: x.explode().nunique(),
+        'netEcContribution': 'sum',
+    }
+    title_dict = {
+        'countryCode': 'Country',
+        'name': 'Organisation',
+        'topic_name': 'Topic'
+    }
+    color_dict = {
+        'countryCode': 'Viridis',
+        'name': 'Cividis',
+        'topic_name': 'Cividis'
+    }
+    if by_col != 'name':
+        agg_dict['name'] = 'nunique'
     graph_data = (data.groupby(by=by_col, as_index=False)
-                    .agg({
-                        'projectID': lambda x: x.explode().nunique(),
-                        'netEcContribution': 'sum',
-                        'name': 'nunique'
-                    })
+                    .agg(agg_dict)
                     .sort_values(metric_col, ascending=True))
     graph_data['custom_hover'] = (
         '<b>' + graph_data[by_col].astype(str) + '</b><br><i>' +
@@ -165,13 +179,14 @@ def build_graph(data, by_col, metric_col, metric_text):
             x=metric_col, 
             y=by_col, 
             orientation='h',
-            title=f"{metric_text} per Country",
+            title=f"{metric_text} per {title_dict[by_col]}",
             color=metric_col,
-            color_continuous_scale="Viridis",
+            color_continuous_scale=color_dict[by_col],
             template="plotly_white",
         )
+        graph_fig.update_coloraxes(showscale=False)
     graph_fig.update_traces(hovertemplate=graph_data['custom_hover'])
-    graph_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20))
+    graph_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), yaxis_title='', xaxis_title=metric_text)
     
     return graph_fig
 
@@ -183,11 +198,6 @@ def build_aggregated_graphs(metric, data):
 
     layout = []
 
-    agg_func = {
-        'project': {'projectID': lambda x: x.explode().nunique()}, # se metric==project, allora deve contare gli elementi unici in data['projectID'] per ogni riga
-        'funding': {'netEcContribution': 'sum'}, # se metric==funding, allora deve sommare nel groupby
-        'org': {'name': 'nunique'} # se metric==org, allora deve contare gli elementi unici in data['name']
-    }
     metric_metadata = {
         'project': {'col': 'projectID', 'text': 'Number of projects'}, 
         'funding': {'col': 'netEcContribution', 'text': 'Funding amount'},
@@ -215,34 +225,14 @@ def build_aggregated_graphs(metric, data):
     ]))
 
     if metric != 'org' and data['name'].explode().nunique() > 1:
-        org_data = (data.groupby(by='name', as_index=False)
-                        .agg({
-                            'projectID': lambda x: x.explode().nunique(),
-                            'netEcContribution': 'sum',
-                        })
-                        .sort_values(col, ascending=True))
-        org_data['custom_hover'] = (
-            '<b>' + org_data['name'].astype(str) + '</b><br><i>' +
-            org_data['projectID'].astype(str) + ' projects<br>' +
-            org_data['netEcContribution'].astype(str) + ' € funded<br>'
-        )
-        org_fig = px.bar(
-            org_data, 
-            x=col, 
-            y="name", 
-            orientation='h',
-            title=f"{text} per Organisation",
-            color=col,
-            color_continuous_scale="Viridis",
-            template="plotly_white",
-        )
-        org_fig.update_traces(hovertemplate=org_data['custom_hover'])
-        org_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), showlegend=False)
+        layout.append(html.Hr(className="my-1 border-3"))
+        org_fig = build_graph(data, 'name', col, text)
         layout.append(dbc.Row(
             dbc.Col(dcc.Graph(figure=org_fig, id='agg_orgs'), width={"size": 8, "offset": 2}, xs=12, lg=12))
         )
 
     if data['topic_name'].explode().nunique() > 1:
+        layout.append(html.Hr(className="my-1 border-3"))
         topic_fig = build_graph(data, 'topic_name', col, text)
         layout.append(dbc.Row(
             dbc.Col(dcc.Graph(figure=topic_fig, id='agg_topics'), width={"size": 8, "offset": 2}, xs=12, lg=12))
