@@ -1,12 +1,14 @@
 import dash
 import math
+import json
+import pandas as pd
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output, State, ctx, callback, ALL
 
 from utils import TITLE, COUNTRY_CODES, topic_names
 import scripts._rag as script
 from scripts._rag__projects_list import build_accordion_items
-from scripts._rag__aggregated_view import build_aggregated_view, build_aggregated_graphs
+from scripts._rag__aggregated_view import build_aggregated_view, build_aggregated_graphs, build_graph
 from scripts._rag__latent_space import build_latent_space
 
 PAGE_TITLE = "RAG"
@@ -433,6 +435,26 @@ def display_aggregated(retrieved_projects, coordinator_projects, is_coordinator,
 def update_agg_graph(radio_value, stored_data):
     return build_aggregated_graphs(radio_value, stored_data)
 
+@callback(
+    Output("agg-orgs-container", "children"),
+    Input("slider-agg-orgs",  "value"),
+    Input("coordinator-toggle", "value"), 
+    Input("metrics-radio",  "value"),
+    Input("agg-store",  "data"),
+)
+def update_agg_orgs_graph(slider_value, is_coordinator, metric, stored_data):
+    if metric == 'project':
+        col = 'projectID'
+        text = 'Number of projects'
+    else:
+        col = 'netEcContribution'
+        text = 'Funding amount'
+    data = pd.DataFrame(json.loads(stored_data))
+    if is_coordinator:
+        data = data[data['role'] == 'coordinator']
+    org_fig = build_graph(data, 'name', col, text, topk=slider_value)
+    return dcc.Graph(figure=org_fig, id='agg_orgs')
+
 # latent space
 @callback(
     Output('latent-section', 'children'),
@@ -447,9 +469,3 @@ def display_latent_space(retrieved_projects, user_input):
         )
     
     return build_latent_space(retrieved_projects, user_input)
-
-"""
-Input("coordinator-toggle", "value"),
-if is_coordinator:
-    data = data[data['role'] == 'coordinator
-"""

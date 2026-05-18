@@ -139,55 +139,36 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
 
     return html.Div(children=[kpi_row, controls_row, graph_area], id="aggregated-view"), data.to_json(orient='records')
 
-def build_graph(data, by_col, metric_col, metric_text):
-    agg_dict = {
-        'projectID': lambda x: x.explode().nunique(),
-        'netEcContribution': 'sum',
-    }
-    title_dict = {
-        'countryCode': 'Country',
-        'name': 'Organisation',
-        'topic_name': 'Topic'
-    }
-    color_dict = {
-        'countryCode': 'Viridis',
-        'name': 'Cividis',
-        'topic_name': 'Cividis'
-    }
-    if by_col != 'name':
-        agg_dict['name'] = 'nunique'
-    graph_data = (data.groupby(by=by_col, as_index=False)
-                    .agg(agg_dict)
-                    .sort_values(metric_col, ascending=True))
+def build_graph(data, by_col, metric_col, metric_text, topk=10):
+    TITLE_MAP = {'countryCode': 'Country', 'name': 'Organisation', 'topic_name': 'Topic', 'activityType': 'Activity Type'}
+
+    agg_dict = {'projectID': lambda x: x.explode().nunique(), 'netEcContribution': 'sum',
+                **({'name': 'nunique'} if by_col != 'name' else {})}
+
+    graph_data = data.groupby(by=by_col, as_index=False).agg(agg_dict)
+    graph_title = f"{metric_text} per {TITLE_MAP[by_col]}"
+
+    if by_col == 'name':
+        graph_data = graph_data.nlargest(topk, metric_col)
+        graph_title += f' - Top {topk} Players'
+
+    graph_data = graph_data.sort_values(metric_col, ascending=True)
     graph_data['custom_hover'] = (
-        '<b>' + graph_data[by_col].astype(str) + '</b><br><i>' +
+        '<b>' + graph_data[by_col].astype(str) + '</b><br>' +
         graph_data['projectID'].astype(str) + ' projects<br>' +
         graph_data['netEcContribution'].astype(str) + ' € funded<br>' +
         graph_data['name'].astype(str) + ' organisations<br>'
     )
+
     if by_col == 'activityType':
-        graph_fig = px.pie(
-            graph_data, 
-            values=metric_col, 
-            names=by_col, 
-            title=f"{metric_text} per Activity Type",
-            hole=0.4,
-        )
+        graph_fig = px.pie(graph_data, values=metric_col, names=by_col, title=graph_title, hole=0.4)
     else:
-        graph_fig = px.bar(
-            data_frame=graph_data, 
-            x=metric_col, 
-            y=by_col, 
-            orientation='h',
-            title=f"{metric_text} per {title_dict[by_col]}",
-            color=metric_col,
-            color_continuous_scale=color_dict[by_col],
-            template="plotly_white",
-        )
+        graph_fig = px.bar(graph_data, x=metric_col, y=by_col, orientation='h', title=graph_title,
+                           color=metric_col, color_continuous_scale='Emrld', template="plotly_white")
         graph_fig.update_coloraxes(showscale=False)
+
     graph_fig.update_traces(hovertemplate=graph_data['custom_hover'])
     graph_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), yaxis_title='', xaxis_title=metric_text)
-    
     return graph_fig
 
 def build_aggregated_graphs(metric, data):
@@ -226,9 +207,9 @@ def build_aggregated_graphs(metric, data):
 
     if metric != 'org' and data['name'].explode().nunique() > 1:
         layout.append(html.Hr(className="my-1 border-3"))
-        org_fig = build_graph(data, 'name', col, text)
+        layout.append(dcc.Slider(5, 30, 5, value=10, id='slider-agg-orgs', className='mt-2'))
         layout.append(dbc.Row(
-            dbc.Col(dcc.Graph(figure=org_fig, id='agg_orgs'), width={"size": 8, "offset": 2}, xs=12, lg=12))
+            dbc.Col(id='agg-orgs-container', width={"size": 8, "offset": 2}, xs=12, lg=12))
         )
 
     if data['topic_name'].explode().nunique() > 1:
