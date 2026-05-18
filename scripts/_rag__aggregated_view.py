@@ -97,15 +97,17 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
     if org_list:
         data = data[data['name'].isin(org_list)]
 
+    last_valid = lambda x: x.tail(1)
+
     data = data.groupby(by=['organisationID', 'role', 'topic_name', 'fp'],
                         observed=True,
                         as_index=False
-                        ).agg({'name': lambda x: x.tail(1),
+                        ).agg({'name': last_valid,
                                'projectID': list, 
-                               'countryCode': lambda x: x.tail(1),
-                               'activityType': lambda x: x.tail(1),
+                               'countryCode': last_valid,
+                               'activityType': last_valid,
                                'netEcContribution': 'sum'})
-    
+
     all_fp =        data['fp'].unique()
     tot_proj =      data['projectID'].explode().nunique()
     all_country =   country_list    or data['countryCode'].unique()
@@ -137,6 +139,9 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
 
 def build_aggregated_graphs(metric, data):
     data = pd.DataFrame(json.loads(data))
+
+    if data.empty:
+        return []
 
     layout = []
 
