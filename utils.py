@@ -54,7 +54,7 @@ COUNTRY_CODES = {
     # Europa (non-UE)
     'AD': 'Andorra', 'AL': 'Albania', 'AM': 'Armenia', 'AZ': 'Azerbaijan',
     'BA': 'Bosnia and Herzegovina', 'BY': 'Belarus', 'CH': 'Switzerland',
-    'FO': 'Faroe Islands', 'GE': 'Georgia', 'GB': 'United Kingdom', 
+    'FO': 'Faroe Islands', 'GE': 'Georgia', 'UK': 'United Kingdom', 
     'GI': 'Gibraltar', 'GL': 'Greenland', 'IS': 'Iceland', 'IM': 'Isle of Man',
     'JE': 'Jersey', 'LI': 'Liechtenstein', 'MC': 'Monaco', 'MD': 'Moldova',
     'ME': 'Montenegro', 'MK': 'North Macedonia', 'NO': 'Norway', 'RS': 'Serbia',
