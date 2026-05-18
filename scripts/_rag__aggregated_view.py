@@ -305,6 +305,5 @@ def build_aggregated_graphs(is_coordinator, metric, data):
         layout.append(dbc.Row(
             dbc.Col(dcc.Graph(figure=topic_fig, id='agg_topics'), width={"size": 8, "offset": 2}, xs=12, lg=12))
         )
-    
 
     return html.Div(layout, style={"display": "flex", "flexDirection": "column", "gap": "1.5rem"})

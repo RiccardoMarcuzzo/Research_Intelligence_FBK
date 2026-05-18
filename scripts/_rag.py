@@ -3,7 +3,7 @@ import numpy as np
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForFeatureExtraction
 
-from utils import org_topics_df, projects_df, RAG_EMBS
+from utils import org_topics_df, projects_df, RAG_EMBS, org_projects_df
 
 THRESHOLD = 0.55
 _rag_tokenizer = None
@@ -55,6 +55,43 @@ def encode(text, max_length=8192):
     embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
     
     return embeddings.detach().cpu().numpy()
+
+def retrieve_active_indices_n(*args):
+    fp_list, country_list, typeorg_list, org_list, topic_list, user_input = args
+
+    filters = {
+        'fp': fp_list,
+        'countryCode': country_list,
+        'activityType': typeorg_list,
+        'name': org_list,
+        'topic_name': topic_list,
+    }
+    mask = np.ones(len(org_projects_df), dtype=bool)
+    for col, lst in filters.items():
+        if lst:
+            mask &= org_projects_df[col].isin(lst)
+
+    valid_ids = set(org_projects_df.loc[mask, 'projectID'])  # set per O(1) lookup
+
+    if not valid_ids:
+        return ''
+
+    match = projects_df['projectID'].isin(valid_ids).to_numpy()
+    active_indices = np.where(match)[0]
+
+    if user_input and len(active_indices):
+        filtered_embs = RAG_EMBS[active_indices]
+        query_emb = encode(user_input, max_length=8192).reshape(1, -1)
+        cos_scores = (filtered_embs @ query_emb.T).ravel()
+
+        valid_mask = cos_scores > THRESHOLD
+        if not valid_mask.any():
+            return ''
+        active_indices = active_indices[valid_mask]
+        active_indices = active_indices[np.argsort(cos_scores[valid_mask])[::-1]]
+
+    filtered_projects = projects_df.iloc[active_indices]
+    return '' if filtered_projects.empty else filtered_projects.reset_index().to_json(orient='records')
 
 def retrieve_active_indices(*args):
     fp_list, country_list, typeorg_list, org_list, topic_list, user_input = args

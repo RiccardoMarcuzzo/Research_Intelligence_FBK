@@ -284,7 +284,7 @@ def retrieve_idx(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_
     if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
         return ''
     
-    return script.retrieve_active_indices(
+    return script.retrieve_active_indices_n(
         fp_list, country_list, typeorg_list, org_list, topic_list, user_input
     )
 
