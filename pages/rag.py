@@ -452,7 +452,10 @@ def update_agg_orgs_graph(slider_value, is_coordinator, metric, stored_data):
     data = pd.DataFrame(json.loads(stored_data))
     if is_coordinator:
         data = data[data['role'] == 'coordinator']
-    org_fig = build_graph(data, 'name', col, text, topk=slider_value)
+        role = 'Coordinators'
+    else:
+        role = 'Participants'
+    org_fig = build_graph(data, 'name', col, text, topk=slider_value, role=role)
     return dcc.Graph(figure=org_fig, id='agg_orgs')
 
 # latent space

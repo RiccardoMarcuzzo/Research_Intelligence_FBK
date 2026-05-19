@@ -139,7 +139,7 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
 
     return html.Div(children=[kpi_row, controls_row, graph_area], id="aggregated-view"), data.to_json(orient='records')
 
-def build_graph(data, by_col, metric_col, metric_text, topk=10):
+def build_graph(data, by_col, metric_col, metric_text, topk=10, role=''):
     TITLE_MAP = {'countryCode': 'Country', 'name': 'Organisation', 'topic_name': 'Topic', 'activityType': 'Activity Type'}
 
     agg_dict = {'projectID': lambda x: x.explode().nunique(), 'netEcContribution': 'sum',
@@ -150,7 +150,7 @@ def build_graph(data, by_col, metric_col, metric_text, topk=10):
 
     if by_col == 'name':
         graph_data = graph_data.nlargest(topk, metric_col)
-        graph_title += f' - Top {topk} Players'
+        graph_title += f' - Top {topk} {role}'
 
     graph_data = graph_data.sort_values(metric_col, ascending=True)
     graph_data['custom_hover'] = (
@@ -161,7 +161,9 @@ def build_graph(data, by_col, metric_col, metric_text, topk=10):
     )
 
     if by_col == 'activityType':
-        graph_fig = px.pie(graph_data, values=metric_col, names=by_col, title=graph_title, hole=0.4)
+        n_categories = graph_data[by_col].nunique()
+        emrld_colors = px.colors.sample_colorscale('Emrld', n_categories)
+        graph_fig = px.pie(graph_data, values=metric_col, names=by_col, title=graph_title, hole=0.4, color_discrete_sequence=emrld_colors)
     else:
         graph_fig = px.bar(graph_data, x=metric_col, y=by_col, orientation='h', title=graph_title,
                            color=metric_col, color_continuous_scale='Emrld', template="plotly_white")
