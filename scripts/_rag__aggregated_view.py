@@ -120,15 +120,18 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
 
     kpi_row = build_kpi_row(all_fp, tot_proj, all_country, all_typeorg, all_org, all_topic, tot_money)
 
+    radio_items = [
+        {"label": "Projects produced",   "value": "project"},
+        {"label": "Funding amount", "value": "funding"}
+    ]
+    if len(all_org) > 1:
+        radio_items.append({"label": "Organisations involved",      "value": "org"})
+
     controls_row = html.Div([
         # Radio buttons orizzontali
         dbc.RadioItems(
             id="metrics-radio",
-            options=[
-                {"label": "Projects produced",   "value": "project"},
-                {"label": "Funding amount", "value": "funding"},
-                {"label": "Organisations involved",      "value": "org"},
-            ],
+            options=radio_items,
             value="project",
             inline=True, 
             className="mb-3"
@@ -173,11 +176,9 @@ def build_graph(data, by_col, metric_col, metric_text, topk=10, role=''):
     graph_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), yaxis_title='', xaxis_title=metric_text)
     return graph_fig
 
-def build_aggregated_graphs(metric, data):
-    data = pd.DataFrame(json.loads(data))
-
-    if data.empty:
-        return []
+def build_aggregated_graphs(is_coordinator, metric, data):
+    if is_coordinator:
+        data = data[data['role'] == 'coordinator']
 
     layout = []
 

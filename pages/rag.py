@@ -428,12 +428,16 @@ def display_aggregated(retrieved_projects, coordinator_projects, is_coordinator,
 
 @callback(
     Output("agg-graph-container", "children"),
+    Input("coordinator-toggle", "value"), 
     Input("metrics-radio",  "value"),
     Input("agg-store",  "data"),
     prevent_initial_call=True
 )
-def update_agg_graph(radio_value, stored_data):
-    return build_aggregated_graphs(radio_value, stored_data)
+def update_agg_graph(is_coordinator, radio_value, stored_data):
+    data = pd.DataFrame(json.loads(stored_data))
+    if data.empty:
+        return []
+    return build_aggregated_graphs(is_coordinator, radio_value, data)
 
 @callback(
     Output("agg-orgs-container", "children"),
