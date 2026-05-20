@@ -1,16 +1,15 @@
 import torch
-import json
 import numpy as np
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForFeatureExtraction
 
-from utils import org_topics_df, projects_df, RAG_EMBS, org_projects_df
+from utils import projects_df, RAG_EMBS, org_projects_df
 
 THRESHOLD = 0.55
 _rag_tokenizer = None
 _rag_model = None
 
-org_names_countries = org_topics_df[['name', 'country_code', 'activityType']].drop_duplicates() 
+org_names_countries = org_projects_df[['name', 'countryCode', 'activityType']].drop_duplicates() 
 def update_dropdown(search_value, country_list, typeorg_list):
     
     df = org_names_countries

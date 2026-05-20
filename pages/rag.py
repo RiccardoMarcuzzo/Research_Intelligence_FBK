@@ -23,9 +23,9 @@ dash.register_page(
     order=0
 )
 
-#--------------------------------------------
-#- LAYOUT      
-#--------------------------------------------
+# ===============
+# --- LAYOUT ---
+ #===============
 layout = dbc.Container(
     [
         # === ROW 1: FILTRI ===
@@ -265,10 +265,10 @@ layout = dbc.Container(
 )
 
 
-#--------------------------------------------
-#- CALLBACK
-#--------------------------------------------
-# === ORG filter callback ===
+# =================
+# --- CALLBACK ---
+# =================
+# --- ORG filter callback
 @callback(
     Output('org-filter-proj', 'options'),
     Input('org-filter-proj', 'search_value'),
@@ -337,6 +337,8 @@ def reset_filters(n_clicks):
     return [], [], [], [], [], '', ['Enter your requests and click "Retrieve"'], ''
 
 # === TABS ===
+# -----------------------------------------------------------------------------------------
+# --- Project list
 @callback(
     Output('results-section', 'children'),
     Output('store-current-page', 'data'),
@@ -401,8 +403,8 @@ def display_projects(prev_clicks, next_clicks, is_coordinator, retrieved_project
         current_page >= total_pages - 1, # next disabled
         style_visible
     )
-
-# Callback separato per gestire i bottoni di navigazione
+#* -------------------------------------------------------------------------------------------
+#* Navigation buttons
 @callback(
     Output('store-current-page', 'data', allow_duplicate=True),
     Input('btn-prev-page', 'n_clicks'),
@@ -420,8 +422,8 @@ def update_page(prev_clicks, next_clicks, n_click, *filter_inputs_and_state):
         return max(0, current_page - 1)
     else:
         return 0
-
-# aggregated view
+# -----------------------------------------------------------------------------------------
+# --- Aggregated view
 @callback(
     Output('aggregated-section', 'children'),
     Output("agg-store", "data"), 
@@ -477,8 +479,8 @@ def update_agg_orgs_graph(slider_value, is_coordinator, metric, stored_data):
         role = 'Participants'
     org_fig = build_graph(data, 'name', col, text, topk=slider_value, role=role)
     return dcc.Graph(figure=org_fig, id='agg_orgs')
-
-# latent space
+# -----------------------------------------------------------------------------------------
+# --- Latent space
 @callback(
     Output('latent-section', 'children'),
     Input('retrieved-idx-store', 'data'),
@@ -493,7 +495,7 @@ def display_latent_space(retrieved_projects, user_input):
     
     return build_latent_space(retrieved_projects, user_input)
 
-# --- DOWNLOAD BUTTONS ---
+# === Download Buttons ===
 @callback(
     Output('download-projects-csv', 'data'),
     Input('download-button-proj', 'n_clicks'),
