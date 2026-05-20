@@ -1,6 +1,8 @@
 import dash
 import math
+import io
 import json
+from datetime import datetime
 import pandas as pd
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output, State, ctx, callback, ALL
@@ -22,7 +24,7 @@ dash.register_page(
 )
 
 #--------------------------------------------
-# LAYOUT      
+#- LAYOUT      
 #--------------------------------------------
 layout = dbc.Container(
     [
@@ -130,18 +132,6 @@ layout = dbc.Container(
                 ),
                 dbc.Col(
                     dbc.Button(
-                        "Reset Filters",
-                        id="reset-button-proj",
-                        outline=True,
-                        color="primary",
-                        className="w-100",
-                        size="lg",
-                        style={'borderRadius': '8px'},
-                    ),
-                    width={"size": 2, "offset": 1}
-                ),
-                dbc.Col(
-                    dbc.Button(
                         "Retrieve",
                         id="retrieve-button-proj",
                         color="primary",
@@ -149,8 +139,34 @@ layout = dbc.Container(
                         size="lg",
                         style={'borderRadius': '8px'},
                     ),
-                    width=2
+                    width={'size':2, 'offset':1}
                 ),
+                dbc.Col(
+                    dbc.Button(
+                        "Reset",
+                        id="reset-button-proj",
+                        outline=True,
+                        color="primary",
+                        className="w-100",
+                        size="lg",
+                        style={'borderRadius': '8px'},
+                    ),
+                    width='auto'
+                ),
+                dbc.Col(
+                    [dbc.Button(
+                        "Download",
+                        id="download-button-proj",
+                        outline=True,
+                        color="primary",
+                        className="w-100",
+                        size="lg",
+                        style={'borderRadius': '8px'},
+                    ),
+                    dcc.Download(id='download-projects-csv')],
+                    width='auto'
+                ),
+
             ],
             className="mb-3 g-2",
             align="center"
@@ -250,7 +266,7 @@ layout = dbc.Container(
 
 
 #--------------------------------------------
-# CALLBACK
+#- CALLBACK
 #--------------------------------------------
 # === ORG filter callback ===
 @callback(
@@ -476,3 +492,43 @@ def display_latent_space(retrieved_projects, user_input):
         )
     
     return build_latent_space(retrieved_projects, user_input)
+
+# --- DOWNLOAD BUTTONS ---
+@callback(
+    Output('download-projects-csv', 'data'),
+    Input('download-button-proj', 'n_clicks'),
+    State('retrieved-idx-store', 'data'),
+    State('country-filter-proj', 'value'),
+    State('type-filter-proj', 'value'),
+    State('org-filter-proj', 'value'),
+)
+def download_csv(n_clicks, indices, country_list, typeorg_list, org_list):
+    if not indices:
+        return None
+    df = script.download_file(indices, country_list, typeorg_list, org_list)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    metadata = (
+        f"# Exported: {timestamp}\n"
+        "# To read in pandas: pd.read_csv('<file>.csv', comment='#')\n"
+        "# Columns:\n"
+        "# — projectID: the unique identifier in CORDIS database for the project.\n"
+        "# — organisationID: the unique identifier in CORDIS database for the organisation.\n"
+        "# — name: the organisation's name.\n"
+        "# — countryCode: the organisation's country.\n"
+        "# — activityType: the organisation's activity type.\n"
+        "# — role: the organisation's role for the project.\n"
+        "# — netEcContribution: the funding amount received by the organisation for the project.\n"
+        "# — topic_name: the project's topic.\n"
+        "# — fp: the frameowrk programme in which the project was delivered.\n"
+        "# — title: the project's title.\n"
+        "# — deliverables: link(s) to the deliverable associated to the project.\n"
+        f"# Rows: {len(df)}\n"
+        "# ---\n"
+    )
+    buffer = io.StringIO()
+    buffer.write(metadata)
+    df.to_csv(buffer, index=False)
+    buffer.seek(0)
+
+    return dcc.send_bytes(buffer.getvalue().encode(), f"{timestamp}.csv")

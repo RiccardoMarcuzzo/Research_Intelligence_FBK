@@ -1,4 +1,5 @@
 import torch
+import json
 import numpy as np
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForFeatureExtraction
@@ -98,3 +99,25 @@ def retrieve_active_indices(*args):
     coordinator_indices = [i for i in active_indices if i in coordinator_match_set]
 
     return active_indices, coordinator_indices
+
+def download_file(active_indices, country_list, typeorg_list, org_list):
+    valid_projects = projects_df.iloc[active_indices]
+    valid_project_ids = valid_projects['projectID'].tolist()
+
+    data = org_projects_df[org_projects_df['projectID'].isin(valid_project_ids)].copy()
+
+    if country_list:
+        data = data[data['countryCode'].isin(country_list)]
+    if typeorg_list:
+        data = data[data['activityType'].isin(typeorg_list)]
+    if org_list:
+        data = data[data['name'].isin(org_list)]
+
+    cols = [c for c in data.columns if c != "name"]
+    cols.insert(2, "name")
+    data = data[cols]
+
+    final_data = data.merge(valid_projects[['projectID', 'title', 'physUrl']], on='projectID')
+    final_data = final_data.rename(columns={'physUrl': 'deliverables'})
+
+    return final_data
