@@ -16,7 +16,7 @@ def update_dropdown(search_value, country_list, typeorg_list):
 
     mask = True
     if country_list:
-        mask &= df['country_code'].isin(country_list)
+        mask &= df['countryCode'].isin(country_list)
     if typeorg_list:
         mask &= df['activityType'].isin(typeorg_list)
 
