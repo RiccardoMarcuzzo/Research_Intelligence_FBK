@@ -204,6 +204,8 @@ layout = dbc.Container(
         dcc.Store(id='coordinator-idx-store', data=[]),
         dcc.Store(id='store-current-page', data=0),
         dcc.Store(id='agg-store', data=''),
+        html.Div(id='dummy', style={'display': 'none'}),
+        html.Div(id='cordis-link-container', style={'marginTop': '10px'}),
         
         html.Div(
             id='results-tabs-container',
@@ -484,16 +486,21 @@ def update_agg_orgs_graph(slider_value, is_coordinator, metric, stored_data):
 @callback(
     Output('latent-section', 'children'),
     Input('retrieved-idx-store', 'data'),
+    Input('coordinator-idx-store', 'data'),
+    Input('coordinator-toggle', 'value'),
     State('user-input-proj', 'value'),
     prevent_initial_call=True
 )
-def display_latent_space(retrieved_projects, user_input):
-    if not retrieved_projects:
+def display_latent_space(retrieved_projects, coordinator_projects, is_coordinator, user_input):
+    if is_coordinator:
+        indices = coordinator_projects
+    else:
+        indices = retrieved_projects
+    if not indices:
         return (
             [html.P('Enter your requests and click "Retrieve"')]
         )
-    
-    return build_latent_space(retrieved_projects, user_input)
+    return build_latent_space(indices, user_input)
 
 # === Download Buttons ===
 @callback(

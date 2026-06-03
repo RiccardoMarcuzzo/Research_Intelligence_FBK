@@ -204,6 +204,20 @@ app.clientside_callback(
     prevent_initial_call=False,
 )
 
+# on point click in latent space tab
+app.clientside_callback(
+    """
+    function(clickData) {
+        if (clickData && clickData.points && clickData.points.length > 0) {
+            var pid = clickData.points[0].customdata[1];
+            window.open("https://cordis.europa.eu/project/id/" + pid, "_blank");
+        }
+        return "";
+    }
+    """,
+    Output('dummy', 'children'),
+    Input('latent-space-graph', 'clickData')  # <-- metti l'id del tuo dcc.Graph
+)
 
 if __name__ == "__main__":
     app.run(debug=True, port=PORT, host="0.0.0.0")

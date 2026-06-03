@@ -36,6 +36,8 @@ TOPs_No = len(labels_pkl)
 
 # caricamento per il RAG system
 RAG_EMBS = np.load('data/bge_1024dim.npy')
+D2_RAG_EMBS = np.load('data/2D_embs.npy')
+LATENT_SPACE_RADIUS = 0.1
 
 # Lista dei topic
 topic_names = sorted(labels_pkl.values())
