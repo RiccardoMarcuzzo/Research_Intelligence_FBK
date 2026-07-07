@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 import pandas as pd
 import dash_bootstrap_components as dbc
-from dash import dcc, html, Input, Output, State, ctx, callback, ALL
+from dash import dcc, html, Input, Output, State, ctx, callback, MATCH
 
 from utils import TITLE, COUNTRY_CODES, topic_names
 import scripts._rag as script
@@ -249,12 +249,12 @@ layout = dbc.Container(
                             ),
                         ]),
 
-                        # TAB 2 – Aggregated view
+                        # TAB 2 - Aggregated view
                         dbc.Tab(label='Aggregated view', tab_id='tab-aggregated', children=[
                             html.Div(id='aggregated-section', className="mt-4")
                         ]),
 
-                        # TAB 3 – Latent space
+                        # TAB 3 - Latent space
                         dbc.Tab(label='Latent space', tab_id='tab-latent', children=[
                             html.Div(id='latent-section', className="mt-4")
                 ]),
@@ -405,6 +405,24 @@ def display_projects(prev_clicks, next_clicks, is_coordinator, retrieved_project
         current_page >= total_pages - 1, # next disabled
         style_visible
     )
+@callback(
+    Output({'type': 'section-collapse', 'project': MATCH, 'section': MATCH}, 'is_open'),
+    Output({'type': 'section-chevron', 'project': MATCH, 'section': MATCH}, 'style'),
+    Input({'type': 'section-toggle', 'project': MATCH, 'section': MATCH}, 'n_clicks'),
+    State({'type': 'section-collapse', 'project': MATCH, 'section': MATCH}, 'is_open'),
+    prevent_initial_call=True,
+)
+def toggle_section(n_clicks, is_open):
+    new_state = not is_open
+    chevron_style = {
+        'display': 'inline-block',
+        'transition': 'transform 0.2s ease',
+        'marginLeft': '6px',
+        'cursor': 'pointer',
+        'transform': 'rotate(90deg)' if new_state else 'rotate(0deg)',
+    }
+    return new_state, chevron_style
+
 #* -------------------------------------------------------------------------------------------
 #* Navigation buttons
 @callback(

@@ -216,7 +216,7 @@ app.clientside_callback(
     }
     """,
     Output('dummy', 'children'),
-    Input('latent-space-graph', 'clickData')  # <-- metti l'id del tuo dcc.Graph
+    Input('latent-space-graph', 'clickData')
 )
 
 if __name__ == "__main__":

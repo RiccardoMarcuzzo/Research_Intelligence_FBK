@@ -1,8 +1,9 @@
 import pickle
+import json
+import argparse
 
 import pandas as pd
 import numpy as np
-import argparse
 
 TITLE = 'RESEARCH INTELLIGENCE'
 
@@ -26,9 +27,13 @@ topics_df    = pd.read_parquet('data/topics.parquet',
                                columns=['level_1', 'level_2', 'level_3', 'level_4', 'count'])
 org_topics_df = pd.read_parquet('data/org_topics.parquet')
 org_projects_df = pd.read_parquet('data/org_projects.parquet')
+deliverables_df = pd.read_parquet('data/deliverables.parquet')
+deliverables_df['authors'] = deliverables_df['authors'].apply(json.loads)
 
+# Lista dei topic
 with open('data/labels.pkl', 'rb') as f:
     labels_pkl = pickle.load(f)
+topic_names = sorted(labels_pkl.values())
 
 PROJs_No = projects_df['projectID'].nunique()
 ORGs_No = orgs_df['organisationID'].nunique()
@@ -38,9 +43,6 @@ TOPs_No = len(labels_pkl)
 RAG_EMBS = np.load('data/bge_1024dim.npy')
 D2_RAG_EMBS = np.load('data/2D_embs.npy')
 LATENT_SPACE_RADIUS = 0.1
-
-# Lista dei topic
-topic_names = sorted(labels_pkl.values())
 
 # Dizionario completo dei codici paese (uppercase come nel dataset)
 COUNTRY_CODES = {
