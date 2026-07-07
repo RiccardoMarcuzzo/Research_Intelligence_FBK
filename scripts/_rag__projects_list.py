@@ -4,17 +4,6 @@ from utils import projects_df, deliverables_df
 
 
 def build_collapsible_table_section(label, project_id, section_key, rows):
-    """
-    Crea una sezione con chevron cliccabile + tabella collassabile.
-
-    label: testo mostrato accanto al chevron (es. "Deliverables")
-    project_id: projectID della riga, usato per costruire ID univoci
-    section_key: 'deliverables' o 'publications', per differenziare gli ID
-    rows: lista di dict con chiavi 'title', 'authors', 'link'
-          (per ora title/authors possono essere None)
-
-    Se rows è vuota, la sezione non viene renderizzata affatto (ritorna None).
-    """
     if not rows:
         return None
 
