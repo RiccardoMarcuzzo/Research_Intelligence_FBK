@@ -29,6 +29,8 @@ org_topics_df = pd.read_parquet('data/org_topics.parquet')
 org_projects_df = pd.read_parquet('data/org_projects.parquet')
 deliverables_df = pd.read_parquet('data/deliverables.parquet')
 deliverables_df['authors'] = deliverables_df['authors'].apply(json.loads)
+publications_df = pd.read_parquet('data/publications.parquet')
+publications_df['authors'] = publications_df['authors'].apply(json.loads)
 
 # Lista dei topic
 with open('data/labels.pkl', 'rb') as f:

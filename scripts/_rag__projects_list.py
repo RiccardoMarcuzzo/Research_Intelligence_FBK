@@ -1,9 +1,22 @@
 import dash_bootstrap_components as dbc
 from dash import html
-from utils import projects_df, deliverables_df
+from utils import projects_df, deliverables_df, publications_df
 
 
 def build_collapsible_table_section(label, project_id, section_key, rows):
+
+    if label == "Deliverables":
+        df = deliverables_df
+        link_phrase = 'Download deliverable↗'
+    elif label == "Publications":
+        df = publications_df
+        link_phrase = 'See publication↗'
+    else:
+        return None
+
+    filtered = df[df['projectID'] == project_id]
+    rows = filtered.to_dict('records')
+
     if not rows:
         return None
 
@@ -31,7 +44,7 @@ def build_collapsible_table_section(label, project_id, section_key, rows):
     )
 
     table_header = html.Thead(
-        html.Tr([html.Th("Titolo"), html.Th("Autori"), html.Th("Link")])
+        html.Tr([html.Th("Title"), html.Th("Author(s)"), html.Th("Link")])
     )
     table_body = html.Tbody(
         [
@@ -40,13 +53,15 @@ def build_collapsible_table_section(label, project_id, section_key, rows):
                     html.Td(row.get('title') or '—'),
                     html.Td(
                         html.Div([
-                            html.Div(f"{name} ({affiliation})")
+                            html.Div(f"{name} ({affiliation})") 
+                            if affiliation != 'Unknown'
+                            else html.Div(f"{name}")
                             for name, affiliation in row['authors'].items()
                         ]) if row.get('authors') else '—'
                     ),
                     html.Td(
-                        html.A(f"Download {section_key[:-1]}↗", href=row['link'], target="_blank")
-                        if row.get('link') else '—'
+                        html.A(link_phrase, href=str(row['physUrl']), target="_blank")
+                        if row.get('physUrl') else '—'
                     ),
                 ]
             )
