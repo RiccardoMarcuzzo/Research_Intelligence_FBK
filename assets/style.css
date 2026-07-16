@@ -28,6 +28,10 @@
     color: #000 !important;  /* testo nero */
 }
 
+.dash-dropdown-value-item {
+  color: #000 !important;
+}
+
 /* placeholder resta grigio scuro come nel tema bootstrap */
 .Select-placeholder {
     color: #6c757d !important;  /* grigio scuro standard Bootstrap */

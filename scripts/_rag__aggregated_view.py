@@ -1,5 +1,3 @@
-import json
-import pandas as pd
 import plotly.express as px
 import dash_bootstrap_components as dbc
 
@@ -121,7 +119,7 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
     kpi_row = build_kpi_row(all_fp, tot_proj, all_country, all_typeorg, all_org, all_topic, tot_money)
 
     radio_items = [
-        {"label": "Projects produced",   "value": "project"},
+        {"label": "Projects involved",   "value": "project"},
         {"label": "Funding amount", "value": "funding"}
     ]
     if len(all_org) > 1:

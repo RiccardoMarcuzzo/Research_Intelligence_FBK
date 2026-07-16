@@ -3,7 +3,7 @@ from dash import html
 from utils import projects_df, deliverables_df, publications_df
 
 
-def build_collapsible_table_section(label, project_id, section_key, rows):
+def build_collapsible_table_section(label, project_id, section_key):
 
     if label == "Deliverables":
         df = deliverables_df
@@ -86,17 +86,6 @@ def build_collapsible_table_section(label, project_id, section_key, rows):
 
     return html.Div([header, collapse], className="mt-2")
 
-def retrieve_deliverable_info(link):
-    mask = deliverables_df['physUrl'] == link
-    row = deliverables_df[mask]
-    if row.empty:
-        return {'title': None, 'authors': None, 'link': link}
-    return {
-        'title': row.iloc[0]['title'], 
-        'authors': row.iloc[0]['authors'], 
-        'link': link
-    }
-
 def build_accordion_items(is_coordinator, active_indices, coordinator_indices):
     if is_coordinator:
         data = projects_df.iloc[coordinator_indices]
@@ -108,13 +97,6 @@ def build_accordion_items(is_coordinator, active_indices, coordinator_indices):
         cordis_url = f"https://cordis.europa.eu/project/id/{row['projectID']}"
         proj_fp = 'Horizon 2020' if row['fp'] == 8 else 'Horizon Europe'
         proj_hier = ' → '.join([t for t in row['topic_name_hierarchy'] if t != 'Unlabelled'])
-
-        deliverable_rows = [
-            retrieve_deliverable_info(link)
-            for link in row['physUrl']
-        ]
-
-        publication_rows = []
 
         header = html.Div([
             html.Span(row['title'], style={'fontWeight': '600'}),
@@ -132,13 +114,13 @@ def build_accordion_items(is_coordinator, active_indices, coordinator_indices):
         ]
 
         deliverables_section = build_collapsible_table_section(
-            "Deliverables", row['projectID'], 'deliverables', deliverable_rows
+            "Deliverables", row['projectID'], 'deliverables'
         )
         if deliverables_section is not None:
             body_children.append(deliverables_section)
 
         publications_section = build_collapsible_table_section(
-            "Publications", row['projectID'], 'publications', publication_rows
+            "Publications", row['projectID'], 'publications'
         )
         if publications_section is not None:
             body_children.append(publications_section)
