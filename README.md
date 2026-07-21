@@ -42,10 +42,24 @@ Internal tests discovered [BAAI's bge-m3 embedding model](https://huggingface.co
 Results are shown in three separate tabs. It is also possibile to download the .csv file of the results.
 
 #### Tab "Project list"
+It shows the list of projects retrieved by the combination of filters. 
+If the custom input is defined, the order reflects the relevance of the documents towards the input.
+
 <img width="1809" height="847" alt="Screenshot from 2026-07-21 14-35-33" src="https://github.com/user-attachments/assets/5b82f640-295c-4507-bf09-bf6ea016f54f" />
 
+For every project, their title, programme, topic, participants and objective are displayed. Furthermore, the deliverables and publications linked to that project are shown, enriched with their authors and organisation, and a link to the source. Publications metadata were retrieved combining CORDIS and Scopus databases; deliverables metadata were found using a custom pipeline parsing the pdf documents with a GenAI model.
+
+<img width="1643" height="817" alt="Progetto senza titolo" src="https://github.com/user-attachments/assets/11c390c2-f8ef-464f-aa8f-dd6b4d420fe5" />
+
 #### Tab "Aggregated view"
+It groups the information retrieved and show how every country, organisation type, organisation and topic contributes to the overall landscape found with one's query.
+It is possible to define the comparison metric: number of projects participated, amount of money received, or number of organisation involved.
+
 <img width="1803" height="852" alt="Screenshot from 2026-07-21 14-33-29" src="https://github.com/user-attachments/assets/b630d52b-482e-4b1f-b84d-3654f4694dc1" />
 
 #### Tab "Latent space"
+It projects the results shown in the "Project list" tab onto a different latent space. Coloured points are for the results. Grey points are the neighbours of those results in the new latent space.
+
+The new latent space is the same as the one used for the topic modeling. In this way, users can explore a different view on the projects, and found thematic-similar projects to the ones retrieved.
+
 <img width="1801" height="850" alt="Screenshot from 2026-07-21 14-34-09" src="https://github.com/user-attachments/assets/7b63a5ee-ab34-4848-adbb-8b42c96c00e3" />
