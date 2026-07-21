@@ -17,8 +17,8 @@ As shown in the screenshot below, the possible filters are:
 - **organisation type**: includes only the projects where there were at least one organisation of the types specified
   public body, private company, research organisation, higher education establishment, other);
 - **organisation name**: includes only the projects where the given organisations were involved;
-- **topic**: filters out only the projects pertaining to the given topics (see [below](#custom-input));
-- **custom input**: lets users insert a custom string to better narrow their interests (see [below](#topics));
+- **topic**: filters out only the projects pertaining to the given topics (see [below](#topics));
+- **custom input**: lets users insert a custom string to better narrow their interests (see [below](#custom-input));
 - **coordinator**: retrieves only the projects for the given organisations where the aforementioned organisations coordinated them. 
 
 <img width="1866" height="285" alt="Screenshot from 2026-07-21 14-11-38" src="https://github.com/user-attachments/assets/f2963dd4-f4a7-4604-abea-6f67e4b79823" />
