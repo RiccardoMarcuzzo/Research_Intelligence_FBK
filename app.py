@@ -24,6 +24,7 @@ NAVBAR = {
     "Topics":        {"relative_path": f"{base_path}topics"},
     "Organisations": {"relative_path": f"{base_path}organisations"},
     "Concept":       {"relative_path": f"{base_path}concept"},
+    "Settings":      {"relative_path": f"{base_path}settings"},
 }
 
 def generate_nav_links(current_path):

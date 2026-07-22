@@ -76,11 +76,12 @@ def retrieve_active_indices(*args):
     coordinator_ids = set(masked_org.loc[masked_org['role'] == 'coordinator', 'projectID'])
 
     if not valid_ids:
-        return [], []
+        return [], [], {}
 
     match = projects_df['projectID'].isin(valid_ids).to_numpy()
     active_indices = np.where(match)[0]
 
+    scores_by_project = {}
     if user_input and len(active_indices):
         filtered_embs = RAG_EMBS[active_indices]
         query_emb = encode(user_input, max_length=8192).reshape(1, -1)
@@ -88,16 +89,25 @@ def retrieve_active_indices(*args):
 
         valid_mask = cos_scores > THRESHOLD
         if not valid_mask.any():
-            return [], []
+            return [], [], {}
         active_indices = active_indices[valid_mask]
-        active_indices = active_indices[np.argsort(cos_scores[valid_mask])[::-1]]
+        cos_scores = cos_scores[valid_mask]
+
+        order = np.argsort(cos_scores)[::-1]
+        active_indices = active_indices[order]
+        cos_scores = cos_scores[order]
+
+        matched_project_ids = projects_df['projectID'].to_numpy()[active_indices]
+        scores_by_project = {
+            str(pid): float(score) for pid, score in zip(matched_project_ids, cos_scores)
+        }
 
     coordinator_match = projects_df['projectID'].isin(coordinator_ids).to_numpy()
     coordinator_match_set = set(np.where(coordinator_match)[0])
 
     coordinator_indices = [i for i in active_indices if i in coordinator_match_set]
 
-    return active_indices, coordinator_indices
+    return active_indices, coordinator_indices, scores_by_project
 
 def download_file(active_indices, country_list, typeorg_list, org_list):
     valid_projects = projects_df.iloc[active_indices]

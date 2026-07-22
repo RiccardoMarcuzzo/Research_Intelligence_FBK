@@ -1,3 +1,4 @@
+import os
 import pickle
 import json
 import argparse
@@ -7,11 +8,13 @@ import numpy as np
 
 TITLE = 'RESEARCH INTELLIGENCE'
 
-# Configurazione CLI 
+# Configurazione CLI
 parser = argparse.ArgumentParser(description="Lancio della Dashboard Dash")
 
 parser.add_argument("--path", type=str, default="/research_intelligence/", help="Percorso base dell'app (es: /research_intelligence/)")
 parser.add_argument("--port", type=int, default=8050, help="Porta di esecuzione")
+parser.add_argument("--llm-url", type=str, default=os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"),
+                     help="Base URL of the Ollama server used for the per-project chat (env var: OLLAMA_URL)")
 args = parser.parse_args()
 
 # Pulizia del path
@@ -20,6 +23,7 @@ if not base_path.startswith('/'): base_path = '/' + base_path
 if not base_path.endswith('/'): base_path = base_path + '/'
 
 PORT = args.port
+LLM_URL = args.llm_url.rstrip('/')
 
 projects_df  = pd.read_parquet('data/docs.parquet')
 orgs_df      = pd.read_parquet('data/orgs.parquet')
