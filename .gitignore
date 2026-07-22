@@ -1,9 +1,16 @@
 # ----------------------------------
 # CUSTOM
 # ----------------------------------
-# Data folder
-data/
+# Data folder (contents only, so data/README.md can still be tracked)
+data/*
+!data/README.md
 *.parquet
+
+# Persisted runtime settings (machine-specific, edited via the Settings page)
+llm_settings.json
+
+# macOS
+.DS_Store
 
 #-----------------------------------
 # STANDARD

@@ -12,6 +12,7 @@ import scripts._rag as script
 from scripts._rag__projects_list import build_accordion_items
 from scripts._rag__aggregated_view import build_aggregated_view, build_aggregated_graphs, build_graph
 from scripts._rag__latent_space import build_latent_space
+from scripts._rag__chat import ask_project_chat, explain_relevance
 
 PAGE_TITLE = "RAG"
 
@@ -202,6 +203,7 @@ layout = dbc.Container(
         # === RETRIEVED PROJECTS SECTION ===
         dcc.Store(id='retrieved-idx-store', data=[]),
         dcc.Store(id='coordinator-idx-store', data=[]),
+        dcc.Store(id='query-context-store', data={}),
         dcc.Store(id='store-current-page', data=0),
         dcc.Store(id='agg-store', data=''),
         html.Div(id='dummy', style={'display': 'none'}),
@@ -305,6 +307,7 @@ def show_tabs(n_clicks):
 @callback(
     Output('retrieved-idx-store', 'data'),
     Output('coordinator-idx-store', 'data'),
+    Output('query-context-store', 'data'),
     Input('retrieve-button-proj', 'n_clicks'),
     State('fp-filter-proj', 'value'),
     State('country-filter-proj', 'value'),
@@ -312,16 +315,28 @@ def show_tabs(n_clicks):
     State('org-filter-proj', 'value'),
     State('topic-filter-proj', 'value'),
     State('user-input-proj', 'value'),
-    prevent_initial_call=True    
+    prevent_initial_call=True
 )
 def retrieve_idx(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_list, user_input):
 
     if not any([fp_list, country_list, typeorg_list, org_list, topic_list, user_input]):
-        return [], []
-    
-    return script.retrieve_active_indices(
+        return [], [], {}
+
+    active_indices, coordinator_indices, scores = script.retrieve_active_indices(
         fp_list, country_list, typeorg_list, org_list, topic_list, user_input
     )
+
+    query_context = {
+        'query_text': user_input or '',
+        'fp': fp_list or [],
+        'country': country_list or [],
+        'org_type': typeorg_list or [],
+        'org': org_list or [],
+        'topic': topic_list or [],
+        'scores': scores,
+    }
+
+    return active_indices, coordinator_indices, query_context
 
 @callback(
     Output('fp-filter-proj', 'value'),
@@ -332,11 +347,12 @@ def retrieve_idx(n_clicks, fp_list, country_list, typeorg_list, org_list, topic_
     Output('user-input-proj', 'value'),
     Output('results-section', 'children', allow_duplicate=True),
     Output('retrieved-idx-store', 'data', allow_duplicate=True),
+    Output('query-context-store', 'data', allow_duplicate=True),
     Input('reset-button-proj', 'n_clicks'),
     prevent_initial_call=True,
 )
 def reset_filters(n_clicks):
-    return [], [], [], [], [], '', ['Enter your requests and click "Retrieve"'], ''
+    return [], [], [], [], [], '', ['Enter your requests and click "Retrieve"'], '', {}
 
 # === TABS ===
 # -----------------------------------------------------------------------------------------
@@ -354,9 +370,10 @@ def reset_filters(n_clicks):
     Input('retrieved-idx-store', 'data'),
     Input('coordinator-idx-store', 'data'),
     State('store-current-page', 'data'),
+    State('query-context-store', 'data'),
     prevent_initial_call = True
 )
-def display_projects(prev_clicks, next_clicks, is_coordinator, retrieved_projects, coordinator_projects, current_page):
+def display_projects(prev_clicks, next_clicks, is_coordinator, retrieved_projects, coordinator_projects, current_page, query_context):
     triggered = ctx.triggered_id
 
     if triggered == 'btn-next-page':
@@ -372,7 +389,7 @@ def display_projects(prev_clicks, next_clicks, is_coordinator, retrieved_project
             0, "", True, True, {'display': 'none'}
         )
 
-    accordion_items, total = build_accordion_items(is_coordinator, retrieved_projects, coordinator_projects)
+    accordion_items, total = build_accordion_items(is_coordinator, retrieved_projects, coordinator_projects, query_context)
 
     if not accordion_items:
         return (
@@ -422,6 +439,85 @@ def toggle_section(n_clicks, is_open):
         'transform': 'rotate(90deg)' if new_state else 'rotate(0deg)',
     }
     return new_state, chevron_style
+
+#* -------------------------------------------------------------------------------------------
+#* Per-project chat
+def render_chat_messages(history):
+    bubbles = []
+    for msg in history:
+        is_user = msg['role'] == 'user'
+        bubbles.append(html.Div(
+            msg['content'],
+            style={
+                'backgroundColor': '#0d6efd' if is_user else '#e9ecef',
+                'color': 'white' if is_user else 'black',
+                'padding': '6px 12px',
+                'borderRadius': '12px',
+                'maxWidth': '85%',
+                'alignSelf': 'flex-end' if is_user else 'flex-start',
+                'whiteSpace': 'pre-wrap',
+            }
+        ))
+    return bubbles
+
+@callback(
+    Output({'type': 'chat-messages', 'project': MATCH}, 'children'),
+    Output({'type': 'chat-history', 'project': MATCH}, 'data'),
+    Output({'type': 'chat-input', 'project': MATCH}, 'value'),
+    Input({'type': 'chat-send', 'project': MATCH}, 'n_clicks'),
+    Input({'type': 'chat-input', 'project': MATCH}, 'n_submit'),
+    State({'type': 'chat-input', 'project': MATCH}, 'value'),
+    State({'type': 'chat-history', 'project': MATCH}, 'data'),
+    State('query-context-store', 'data'),
+    prevent_initial_call=True,
+)
+def handle_project_chat(n_clicks, n_submit, user_message, history, query_context):
+    if not user_message or not user_message.strip():
+        raise dash.exceptions.PreventUpdate
+
+    project_id = int(ctx.triggered_id['project'])
+    history = history or []
+
+    try:
+        reply = ask_project_chat(project_id, user_message, history, query_context)
+    except Exception:
+        reply = "⚠️ Could not reach the local LLM (is Ollama running?)."
+
+    history = history + [
+        {'role': 'user', 'content': user_message},
+        {'role': 'assistant', 'content': reply},
+    ]
+
+    return render_chat_messages(history), history, ''
+
+#* -------------------------------------------------------------------------------------------
+#* Per-project relevance explanation
+@callback(
+    Output({'type': 'relevance-output', 'project': MATCH}, 'children'),
+    Output({'type': 'relevance-store', 'project': MATCH}, 'data'),
+    Input({'type': 'relevance-btn', 'project': MATCH}, 'n_clicks'),
+    State('query-context-store', 'data'),
+    prevent_initial_call=True,
+)
+def handle_relevance_explain(n_clicks, query_context):
+    project_id = int(ctx.triggered_id['project'])
+
+    try:
+        explanation, model = explain_relevance(project_id, query_context)
+    except Exception:
+        error = html.Div(
+            "⚠️ Could not reach the local LLM (is Ollama running?).",
+            className='text-danger',
+            style={'fontSize': '0.85rem'}
+        )
+        return error, None
+
+    content = html.Div([
+        html.P(explanation, className='mb-1 fst-italic'),
+        html.Small(f"— via {model}", className='text-muted'),
+    ])
+
+    return content, {'explanation': explanation, 'model': model}
 
 #* -------------------------------------------------------------------------------------------
 #* Navigation buttons

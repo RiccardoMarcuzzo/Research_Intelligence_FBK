@@ -14,3 +14,4 @@ torch==2.9.1
 transformers==4.51.3
 pyarrow==22.0.0
 rank_bm25==0.2.2
+requests==2.34.2
