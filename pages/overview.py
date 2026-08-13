@@ -1,10 +1,12 @@
-import dash
-import utils
-import dash_bootstrap_components as dbc
-import scripts._overview as script
+import json
 
+import dash
+import plotly.graph_objects as go
+import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output, State, ctx, callback, clientside_callback
-from utils import TITLE, base_path
+
+import scripts._overview as script
+from utils import TITLE, PROJs_No, ORGs_No, TOPs_No
 
 PAGE_TITLE = "Overview"
 
@@ -193,63 +195,16 @@ layout = html.Div([
         ),
     ]),
 
-    # TOPICS
-    dbc.Row([
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.Div([
-                        html.I(className="bi bi-lightbulb", style={'fontSize': '3rem', 'color': '#198754'}),
-                    ], className="text-center mb-3"),
-                    html.H4("Topics", className="card-title text-center fw-bold"),
-                    html.P(
-                        "Browse research topics and themes. "
-                        "Identify trending areas and explore thematic connections between projects.",
-                        className="card-text text-muted",
-                        style={'fontSize': '0.95rem', 'lineHeight': '1.6'}
-                    ),
-                    html.Div([
-                        dcc.Link(
-                            dbc.Button("Explore Topics →", color="success", className="w-100 mt-3"),
-                            href="topics"
-                        )
-                    ])
-                ])
-            ], className="h-100 shadow-sm")
-        ], width=4),
-
-        dbc.Col([
-            html.H4('Page: Topics', className="fw-bold mt-2"),
-            html.P(
-                "Here you can select a topic to identify the leading organizations based on project count, total funding received, or publication volume. "
-                "The analysis can be further refined using temporal filters (by Framework Programme) or geographical parameters (by Country). "
-                "Additionally, you can select a second topic to perform a comparative analysis and identify the top players common to both selected research areas.",
-                className="text-muted mt-4",
-                style={'fontSize': '1.1rem', 'lineHeight': '1.6'}
-            )
-        ], width=4),
-
-                dbc.Col([
-            html.Img(src='assets/img/placeholder-topics.png', style={'width': '100%', 'height': '100%', 'objectFit': 'cover'})
-        ], width=4, style={'height': '283px', 'overflow': 'hidden'}),
-
-    ], className="mb-5"),
-
-    
-
-    # ORGANIZATIONS
+    # CHAT
     dbc.Row([
         dbc.Col([
             html.Img(src='assets/img/placeholder-org.jpg', style={'width': '100%', 'height': '100%', 'objectFit': 'cover'})
         ], width=4, style={'height': '283px', 'overflow': 'hidden'}),
 
         dbc.Col([
-            html.H4('Page: Organisations', className="fw-bold mt-2"),
+            html.H4('Page: Chat', className="fw-bold mt-2"),
             html.P(
-                "In this section, you can select a specific organization to analyze its research output across topics " \
-                "based on project count, publication volume, or total funding allocated. " \
-                "The analysis can be further refined by Framework Programme to focus on specific temporal periods. " \
-                "Additionally, you can review the organization's project portfolio and select a second entity to compare and identify their collaborative projects.",
+                "Under development.",
                 className="text-muted mt-4",
                 style={'fontSize': '1.1rem', 'lineHeight': '1.6'}
             )
@@ -261,17 +216,16 @@ layout = html.Div([
                     html.Div([
                         html.I(className="bi bi-building", style={'fontSize': '3rem', 'color': '#0d6efd'}),
                     ], className="text-center mb-3"),
-                    html.H4("Organisations", className="card-title text-center fw-bold"),
+                    html.H4("Chat", className="card-title text-center fw-bold"),
                     html.P(
-                        "Discover research institutions, universities, and companies participating in EU-funded projects. "
-                        "Analyse their collaboration networks and funding patterns.",
+                        "Under development.",
                         className="card-text text-muted",
                         style={'fontSize': '0.95rem', 'lineHeight': '1.6'}
                     ),
                     html.Div([
                         dcc.Link(
-                            dbc.Button("Explore Organisations →", color="primary", className="w-100 mt-3"),
-                            href="organisations"
+                            dbc.Button("Chat with the database →", color="primary", className="w-100 mt-3"),
+                            href="concept"
                         )
                     ])
                 ])
@@ -279,7 +233,7 @@ layout = html.Div([
         ], width=4),
     ], className="mb-5"),
 
-    # RAG
+    # QUERY SEARCH
     dbc.Row([
         dbc.Col([
             dbc.Card([
@@ -287,7 +241,7 @@ layout = html.Div([
                     html.Div([
                         html.I(className="bi bi-card-checklist", style={'fontSize': '3rem', 'color': '#dc3545'}),
                     ], className="text-center mb-3"),
-                    html.H4("Projects", className="card-title text-center fw-bold"),
+                    html.H4("Query", className="card-title text-center fw-bold"),
                     html.P(
                         "Describe what you’re looking for or explore projects using flexible filters (Programme, Country, Organization, Topic). " \
                         "Get tailored results from the full CORDIS database.",
@@ -296,8 +250,8 @@ layout = html.Div([
                     ),
                     html.Div([
                         dcc.Link(
-                            dbc.Button("Explore Projects →", color="danger", className="w-100 mt-3"),
-                            href="projects"
+                            dbc.Button("Query the database →", color="danger", className="w-100 mt-3"),
+                            href="query"
                         )
                     ])
                 ])
@@ -305,7 +259,7 @@ layout = html.Div([
         ], width=4),
 
         dbc.Col([
-            html.H4('Page: Projects', className="fw-bold mt-2"),
+            html.H4('Page: Query', className="fw-bold mt-2"),
             html.P(
                 'Do you have specific questions, or would you like to explore the project portfolio? ' \
                 'This page allows you to query the database directly; ' \
@@ -317,7 +271,7 @@ layout = html.Div([
         ], width=4),
 
         dbc.Col([
-            html.Img(src='assets/img/placeholder-askai.jpg', style={'width': '100%', 'height': '100%', 'objectFit': 'cover'})
+            html.Img(src='assets/img/placeholder-query.jpg', style={'width': '100%', 'height': '100%', 'objectFit': 'cover'})
         ], width=4, style={'height': '283px', 'overflow': 'hidden'}),
     ], className="mb-5"),
 
@@ -335,31 +289,45 @@ layout = html.Div([
 
             dbc.Col([
                 html.Img(src='assets/img/chub.jpg', style={'width': '25%', 'height': 'auto'}),
+                html.H5("Riccardo Marcuzzo", className="fw-bold mb-2 mt-2"),
+                html.A("rmarcuzzo@fbk.eu", href="mailto:rmarcuzzo@fbk.eu?cc=eleonardelli@fbk.eu", 
+                       className="text-info", style={'fontSize': '0.95rem'}),
+                html.P("Topic modeling, taxonomy development and dashboard design.", 
+                    className="text-muted",
+                style={'fontSize': '0.95rem', 'minHeight': '60px'}),                
+            ], width=4, className="text-center px-4"),       
+
+            dbc.Col([
+                html.Img(src='assets/img/chub.jpg', style={'width': '25%', 'height': 'auto'}),
                 html.H5("Veronica Orsanigo", className="fw-bold mb-2 mt-2"),
                 html.A("vorsanigo@fbk.eu", href="mailto:vorsanigo@fbk.eu?cc=rmarcuzzo@fbk.eu,eleonardelli@fbk.eu", 
                        className="text-info", style={'fontSize': '0.95rem'}),
                 html.P("Curation and structuring of project and organisation data.", 
                     className="text-muted", style={'fontSize': '0.95rem', "minHeight": "60px"}),                
-            ], width=4, className="text-center px-4"),
+            ], width=4, className="text-center px-4"),     
 
-            dbc.Col([
-                html.Img(src='assets/img/chub.jpg', style={'width': '25%', 'height': 'auto'}),
-                html.H5("Riccardo Marcuzzo", className="fw-bold mb-2 mt-2"),
-                html.A("rmarcuzzo@fbk.eu", href="mailto:rmarcuzzo@fbk.eu?cc=vorsanigo@fbk.eu,eleonardelli@fbk.eu", 
-                       className="text-info", style={'fontSize': '0.95rem'}),
-                html.P("Topic modeling, taxonomy development and dashboard design.", 
-                    className="text-muted",
-                style={'fontSize': '0.95rem', 'minHeight': '60px'}),                
-            ], width=4, className="text-center px-4"),            
+        ], className="justify-content-center mt-5"),
+
+        dbc.Row([
 
             dbc.Col([
                 html.Img(src='assets/img/dh.png', style={'width': '25%', 'height': 'auto'}),
                 html.H5("Elisa Leonardelli", className="fw-bold mb-2 mt-2"),
-                html.A("eleonardelli@fbk.eu", href="mailto:eleonardelli@fbk.eu?rmarcuzzo@fbk.eu,vorsanigo@fbk.eu", 
+                html.A("eleonardelli@fbk.eu", href="mailto:eleonardelli@fbk.eu?cc=rmarcuzzo@fbk.eu", 
                        className="text-info", style={'fontSize': '0.95rem'}),
                 html.P("Retrieval and management of scientific publication dataset.", 
                     className="text-muted", style={'fontSize': '0.95rem', "minHeight": "60px"}),                
             ], width=4, className="text-center px-4"),
+
+            dbc.Col([
+                html.Img(src='assets/img/land.jpg', style={'width': '25%', 'height': 'auto'}),
+                html.H5("Nicolò Penzo", className="fw-bold mb-2 mt-2"),
+                html.A("npenzo@fbk.eu", href="mailto:npenzo@fbk.eu?cc=rmarcuzzo@fbk.eu,eleonardelli@fbk.eu", 
+                       className="text-info", style={'fontSize': '0.95rem'}),
+                html.P("Curation and testing of explainability API chatbot.", 
+                    className="text-muted", style={'fontSize': '0.95rem', "minHeight": "60px"}),                
+            ], width=4, className="text-center px-4"),
+
         ], className="justify-content-center mt-5"),
 
         html.P(
@@ -394,17 +362,19 @@ layout = html.Div([
 )
 def update_overview(_) -> tuple:
     return (
-        utils.PROJs_No,
-        utils.ORGs_No,
-        utils.TOPs_No)
+        PROJs_No,
+        ORGs_No,
+        TOPs_No)
+
 # TOPIC TREEMAP
 @callback(
     Output('topic-treemap', 'figure'),
-    Input('home-number-of-projects', 'children')  # Trigger quando le metriche sono caricate
+    Input('home-number-of-projects', 'children')
 )
-def update_treemap(_):
-    fig = script.generate_treemap()  # O script.generate_treemap() se è lì
-    return fig
+def load_treemap(_):
+    with open("assets/treemap.json", "r") as f:
+        fig_dict = json.load(f)
+    return go.Figure(fig_dict)
 
 # SIDEBAR
 @callback(

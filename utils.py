@@ -1,11 +1,11 @@
-import pickle
-import json
+import os
 import argparse
 
-import pandas as pd
-import numpy as np
+import lancedb
+from dotenv import load_dotenv
 
 TITLE = 'RESEARCH INTELLIGENCE'
+load_dotenv()
 
 # Configurazione CLI 
 parser = argparse.ArgumentParser(description="Lancio della Dashboard Dash")
@@ -20,31 +20,39 @@ if not base_path.startswith('/'): base_path = '/' + base_path
 if not base_path.endswith('/'): base_path = base_path + '/'
 
 PORT = args.port
+BASE_URL = os.environ.get("EXPLAINABILITY_BASE_URL")
+API_KEY = os.environ.get("EXPLAINABILITY_API_KEY")
+TOPIC_GRAPHS_DIR = "data/project_graphs"
 
-projects_df  = pd.read_parquet('data/docs.parquet')
-orgs_df      = pd.read_parquet('data/orgs.parquet')
-topics_df    = pd.read_parquet('data/topics.parquet', 
-                               columns=['level_1', 'level_2', 'level_3', 'level_4', 'count'])
-org_topics_df = pd.read_parquet('data/org_topics.parquet')
-org_projects_df = pd.read_parquet('data/org_projects.parquet')
-deliverables_df = pd.read_parquet('data/deliverables.parquet')
-deliverables_df['authors'] = deliverables_df['authors'].apply(json.loads)
-publications_df = pd.read_parquet('data/publications.parquet')
-publications_df['authors'] = publications_df['authors'].apply(json.loads)
+db = lancedb.connect("data")
+projects_tbl = db.open_table("projects_uncase")
+participants_tbl = db.open_table("participants")
+deliverables_tbl = db.open_table("deliverables")
+publications_tbl = db.open_table("publications")
 
 # Lista dei topic
-with open('data/labels.pkl', 'rb') as f:
-    labels_pkl = pickle.load(f)
-topic_names = sorted(labels_pkl.values())
+projects_arrow = projects_tbl.search().select(["topic_name_hierarchy"]).to_arrow()
+flat_list = projects_arrow.column("topic_name_hierarchy").combine_chunks().flatten()
+topic_names = sorted(set(flat_list.to_pylist()) - {"Unlabelled"})
 
-PROJs_No = projects_df['projectID'].nunique()
-ORGs_No = orgs_df['organisationID'].nunique()
-TOPs_No = len(labels_pkl)
+PROJs_No = len(
+    projects_tbl.search()
+    .select(["projectID"])
+    .to_arrow()
+    .column("projectID")
+    .unique()
+)
 
-# caricamento per il RAG system
-RAG_EMBS = np.load('data/bge_1024dim.npy')
-D2_RAG_EMBS = np.load('data/2D_embs.npy')
-LATENT_SPACE_RADIUS = 0.1
+ORGs_No = len(
+    participants_tbl.search()
+    .select(["organisationID"])
+    .to_arrow()
+    .column("organisationID")
+    .unique()
+)
+TOPs_No = len(topic_names)
+
+RETRIEVAL_THRESHOLD = 200
 
 # Dizionario completo dei codici paese (uppercase come nel dataset)
 COUNTRY_CODES = {

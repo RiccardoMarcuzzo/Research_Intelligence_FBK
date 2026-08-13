@@ -1,6 +1,6 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc, html, Input, Output
+from dash import dcc, html, Input, Output, State
 from utils import TITLE, base_path, PORT
 
 FBK_LOGO = 'assets/img/fbk-logo-blue.png'
@@ -17,12 +17,10 @@ app = dash.Dash(
 @app.server.route("/")
 def redirect_root():
     from flask import redirect
-    return redirect(f'{base_path}/projects')
+    return redirect(f'{base_path}/query')
 
 NAVBAR = {
-    "Projects":      {"relative_path": f"{base_path}projects"},
-    "Topics":        {"relative_path": f"{base_path}topics"},
-    "Organisations": {"relative_path": f"{base_path}organisations"},
+    "Query":      {"relative_path": f"{base_path}query"},
     "Concept":       {"relative_path": f"{base_path}concept"},
 }
 
@@ -207,17 +205,25 @@ app.clientside_callback(
 # on point click in latent space tab
 app.clientside_callback(
     """
-    function(clickData) {
+    function(clickData, viewData) {
+        if (!viewData || viewData.view !== 'topic') {
+            return "";
+        }
         if (clickData && clickData.points && clickData.points.length > 0) {
-            var pid = clickData.points[0].customdata[1];
-            window.open("https://cordis.europa.eu/project/id/" + pid, "_blank");
+            var point = clickData.points[0];
+            var customdata = point.customdata;
+            if (Array.isArray(customdata) && customdata.length > 1) {
+                var pid = customdata[1];
+                window.open("https://cordis.europa.eu/project/id/" + pid, "_blank");
+            }
         }
         return "";
     }
     """,
     Output('dummy', 'children'),
-    Input('latent-space-graph', 'clickData')
+    Input('project-graph', 'clickData'),
+    State('project-graph-view-store', 'data'),
 )
 
 if __name__ == "__main__":
-    app.run(debug=True, port=PORT, host="0.0.0.0")
+    app.run(debug=False, port=PORT, host="0.0.0.0")

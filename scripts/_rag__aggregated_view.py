@@ -1,9 +1,9 @@
+import io 
+
+import pandas as pd
 import plotly.express as px
 import dash_bootstrap_components as dbc
-
 from dash import html, dcc
-
-from utils import org_projects_df, projects_df
 
 def format_money(value):
     if value >= 1_000_000:
@@ -81,24 +81,11 @@ def build_kpi_row(all_fp, tot_proj, all_country, all_typeorg, all_org, all_topic
         }
     )
 
-def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, country_list, typeorg_list, org_list, topic_list):
-    
-    if is_coordinator:
-        valid_projects = projects_df.iloc[coordinator_indices]['projectID'].tolist()
-    else:
-        valid_projects = projects_df.iloc[active_indices]['projectID'].tolist()
+def build_aggregated_view(participants_data):
 
-    data = org_projects_df[org_projects_df['projectID'].isin(valid_projects)].copy()
-
-    if country_list:
-        data = data[data['countryCode'].isin(country_list)]
-    if typeorg_list:
-        data = data[data['activityType'].isin(typeorg_list)]
-    if org_list:
-        data = data[data['name'].isin(org_list)]
+    data = pd.read_json(io.StringIO(participants_data), orient='split')
 
     last_valid = lambda x: x.tail(1)
-
     data = data.groupby(by=['organisationID', 'role', 'topic_name', 'fp'],
                         observed=True,
                         as_index=False
@@ -110,10 +97,10 @@ def build_aggregated_view(active_indices, coordinator_indices, is_coordinator, c
 
     all_fp =        data['fp'].unique()
     tot_proj =      data['projectID'].explode().nunique()
-    all_country =   country_list    or data['countryCode'].unique()
-    all_typeorg =   typeorg_list    or data['activityType'].unique()
-    all_org =       org_list        or data['name'].unique()
-    all_topic =     topic_list      or data['topic_name'].unique()
+    all_country =   data['countryCode'].unique()
+    all_typeorg =   data['activityType'].unique()
+    all_org =       data['name'].unique()
+    all_topic =     data['topic_name'].unique()
     tot_money =     data['netEcContribution'].sum()
 
     kpi_row = build_kpi_row(all_fp, tot_proj, all_country, all_typeorg, all_org, all_topic, tot_money)
@@ -174,9 +161,7 @@ def build_graph(data, by_col, metric_col, metric_text, topk=10, role=''):
     graph_fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), yaxis_title='', xaxis_title=metric_text)
     return graph_fig
 
-def build_aggregated_graphs(is_coordinator, metric, data):
-    if is_coordinator:
-        data = data[data['role'] == 'coordinator']
+def build_aggregated_graphs(metric, data):
 
     layout = []
 
