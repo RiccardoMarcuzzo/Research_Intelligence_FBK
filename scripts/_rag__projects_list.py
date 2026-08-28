@@ -162,7 +162,7 @@ async def call_relevance_api(project_id, query):
 
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(
-            "http://localhost:8080/v1/project/relevance",
+            "http://host.docker.internal:8080/v1/project/relevance",
             headers={"X-API-Key": API_KEY},
             json={
                 "project": {
