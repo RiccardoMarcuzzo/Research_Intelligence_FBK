@@ -2,6 +2,7 @@ dash[async]==3.2.0
 dash_bootstrap_components==2.0.4
 dotenv==0.9.9
 Flask==3.1.2
+hhtpx==0.28.1
 lancedb==0.36.0
 numpy==2.3.2
 optimum==2.1.0

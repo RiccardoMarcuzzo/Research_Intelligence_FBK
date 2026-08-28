@@ -1,8 +1,7 @@
 import json
 import urllib.request
-import asyncio
-import httpx
 
+import httpx
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 from utils import BASE_URL, API_KEY, projects_tbl
