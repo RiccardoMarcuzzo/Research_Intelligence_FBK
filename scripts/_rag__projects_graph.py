@@ -351,9 +351,9 @@ def build_project_graph(projects_data, user_input, min_weight=2):
 
     overview_fig = build_overview_figure(nodes, edges, min_weight, bool(user_input))
 
-    status_text = "Ogni casella rappresenta un topic: clicca per esplorare i progetti al suo interno." \
-    " Due progetti sono collegati se coprono lo stesso topic e condividono almeno N collaboratori." \
-    " Puoi modificare N con lo slider qui sotto."
+    status_text = "Each box represents a topic: click to explore the projects within it." \
+    " Two projects are connected if they cover the same topic and share at least N collaborators" \
+    " You can adjust N using the slider below."
 
     return html.Div([
         html.Div([
@@ -361,7 +361,7 @@ def build_project_graph(projects_data, user_input, min_weight=2):
             html.P(status_text, style={'color': '#444', 'fontSize': '14px'}),
         ], style={'padding': '15px'}),
         html.Div([
-            html.Label("Collaboratori condivisi minimi", style={'fontSize': '13px', 'color': '#444'}),
+            html.Label("Min. shared collaborators", style={'fontSize': '13px', 'color': '#444'}),
             dcc.Slider(
                 id='project-graph-weight-slider',
                 min=1, max=min(max_weight, 10), step=1, value=min_weight,

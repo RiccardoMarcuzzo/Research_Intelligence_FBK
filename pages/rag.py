@@ -464,10 +464,10 @@ def toggle_section(n_clicks, is_open, current_children):
     State('user-input-proj', 'value'),
     prevent_initial_call=True
 )
-def show_why_relevant(n_clicks, btn_id, user_input):
+async def show_why_relevant(n_clicks, btn_id, user_input):
     project_id = btn_id['index']
     try:
-        explanation = call_relevance_api(project_id, user_input)
+        explanation = await call_relevance_api(project_id, user_input)
     except Exception as e:
         return html.Span(f"Could not load explanation: {e}", style={'color': '#dc3545'})
     return dcc.Markdown(explanation, style={'fontSize': '0.9rem'})

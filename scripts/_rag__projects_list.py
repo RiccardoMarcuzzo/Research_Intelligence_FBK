@@ -1,5 +1,7 @@
 import json
 import urllib.request
+import asyncio
+import httpx
 
 import dash_bootstrap_components as dbc
 from dash import html, dcc
@@ -148,15 +150,45 @@ def build_table_content(rows, link_phrase):
     ])
     return dbc.Table([table_header, table_body], bordered=False, hover=True, size="sm", color="light", className="mt-2 mb-0")
 
-def call_relevance_api(project_id, query):
+
+async def call_relevance_api(project_id, query):
+    row = (
+        projects_tbl.search()
+        .select(["projectID", "title", "objective"])
+        .where(f"projectID IN ({project_id})")
+        .to_arrow()
+    )
+    title = row["title"][0].as_py()
+    objective = row["objective"][0].as_py()
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        response = await client.post(
+            "http://localhost:8080/v1/project/relevance",
+            headers={"X-API-Key": API_KEY},
+            json={
+                "project": {
+                    "title": title,
+                    "objective": objective,
+                },
+                "query_context": {
+                    "query_text": query,
+                },
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("explanation", "Explainability bot not available at the moment.")
+
+
+def call_relevance_api_old(project_id, query):
     row = (
             projects_tbl.search()
             .select(["projectID", "title", "objective"])
             .where(f"projectID IN ({project_id})")
             .to_arrow()
-        )
+        )   
     title = row["title"][0].as_py()
-    objective = row["objective"][0].as_py()
+    objective = row["objective"][0].as_py()       
     payload = {
         "project": {
             "title": title,
