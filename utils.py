@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 TITLE = 'RESEARCH INTELLIGENCE'
 load_dotenv()
 
-# Configurazione CLI 
+# Configurazione CLI
 parser = argparse.ArgumentParser(description="Lancio della Dashboard Dash")
 
 parser.add_argument("--path", type=str, default="/research_intelligence/", help="Percorso base dell'app (es: /research_intelligence/)")
@@ -25,10 +25,10 @@ API_KEY = os.environ.get("EXPLAINABILITY_API_KEY")
 TOPIC_GRAPHS_DIR = "data/project_graphs"
 
 db = lancedb.connect("data")
-projects_tbl = db.open_table("projects_uncase")
+projects_tbl = db.open_table("new_projects_uncase")
 participants_tbl = db.open_table("participants")
 deliverables_tbl = db.open_table("deliverables")
-publications_tbl = db.open_table("publications")
+publications_tbl = db.open_table("new_publications")
 
 # Lista dei topic
 projects_arrow = projects_tbl.search().select(["topic_name_hierarchy"]).to_arrow()

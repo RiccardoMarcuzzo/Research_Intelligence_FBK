@@ -7,7 +7,7 @@ from dash import html, dcc
 from utils import BASE_URL, API_KEY, projects_tbl
 
 PROJECT_COLUMNS = ["projectID", "title", "fp", "topic_name_hierarchy", "participants", "objective",
-                   "has_deliverable", "has_publication"]
+                   "acronym", "n_deliverables", "n_publications"]
 
 def build_collapsible_table_section(label, project_id, section_key, has_rows):
     if label not in ("Deliverables", "Publications"):
@@ -21,7 +21,7 @@ def build_collapsible_table_section(label, project_id, section_key, has_rows):
 
     header = html.Div(
         [
-            html.Strong(f"{label}: "),
+            html.Strong(f"{label} ({has_rows}): "),
             html.Span(
                 "▸",
                 id=chevron_id,
@@ -62,6 +62,7 @@ def build_accordion_items(project_ids, has_user_input):
         cordis_url = f"https://cordis.europa.eu/project/id/{row['projectID']}"
         proj_fp = 'Horizon 2020' if row['fp'] == 8 else 'Horizon Europe'
         proj_hier = ' → '.join([t for t in row['topic_name_hierarchy'] if t != 'Unlabelled'])
+        proj_heading = f"{row['acronym']}: {row['title']}"
         body_children = []
 
         if has_user_input:
@@ -90,7 +91,7 @@ def build_accordion_items(project_ids, has_user_input):
             body_children.append(why_relevant_section)
 
         header = html.Div([
-            html.Span(row['title'], style={'fontWeight': '600'}),
+            html.Span(proj_heading, style={'fontWeight': '600'}),
             html.Div([
                 html.Small(f"{proj_fp}  ·  {proj_hier}", className="text-muted"),
                 html.Br(),
@@ -105,13 +106,13 @@ def build_accordion_items(project_ids, has_user_input):
         ])
 
         deliverables_section = build_collapsible_table_section(
-            "Deliverables", row['projectID'], 'deliverables', row.get('has_deliverable')
+            "Deliverables", row['projectID'], 'deliverables', row.get('n_deliverables')
         )
         if deliverables_section is not None:
             body_children.append(deliverables_section)
 
         publications_section = build_collapsible_table_section(
-            "Publications", row['projectID'], 'publications', row.get('has_publication')
+            "Publications", row['projectID'], 'publications', row.get('n_publications')
         )
         if publications_section is not None:
             body_children.append(publications_section)
@@ -143,7 +144,7 @@ def build_table_content(rows, link_phrase):
                     for name, affiliation in row['authors'].items()
                 ]) if row.get('authors') else '—'
             ),
-            html.Td(html.A(link_phrase, href=str(row['physUrl']), target="_blank") if row.get('physUrl') else '—'),
+            html.Td(html.A(link_phrase, href=str(row['physUrl']), target="_blank") if row.get('physUrl') else 'Not Available'),
         ])
         for row in rows
     ])
