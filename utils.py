@@ -25,10 +25,10 @@ API_KEY = os.environ.get("EXPLAINABILITY_API_KEY")
 TOPIC_GRAPHS_DIR = "data/project_graphs"
 
 db = lancedb.connect("data")
-projects_tbl = db.open_table("new_projects_uncase")
+projects_tbl = db.open_table("projects_uncase")
 participants_tbl = db.open_table("participants")
 deliverables_tbl = db.open_table("deliverables")
-publications_tbl = db.open_table("new_publications")
+publications_tbl = db.open_table("publications")
 
 # Lista dei topic
 projects_arrow = projects_tbl.search().select(["topic_name_hierarchy"]).to_arrow()
