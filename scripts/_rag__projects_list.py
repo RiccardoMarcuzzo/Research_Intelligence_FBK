@@ -62,7 +62,7 @@ def build_accordion_items(project_ids, has_user_input):
         cordis_url = f"https://cordis.europa.eu/project/id/{row['projectID']}"
         proj_fp = 'Horizon 2020' if row['fp'] == 8 else 'Horizon Europe'
         proj_hier = ' → '.join([t for t in row['topic_name_hierarchy'] if t != 'Unlabelled'])
-        proj_heading = f"{row['acronym']}: {row['title']}"
+        proj_heading = f"{row['acronym'].upper()} - {row['title']}"
         body_children = []
 
         if has_user_input:
