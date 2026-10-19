@@ -128,7 +128,7 @@ def build_aggregated_view(participants_data):
     return html.Div(children=[kpi_row, controls_row, graph_area], id="aggregated-view"), data.to_json(orient='records')
 
 def build_graph(data, by_col, metric_col, metric_text, topk=10, role=''):
-    TITLE_MAP = {'countryCode': 'Country', 'name': 'Organisation', 'topic_name': 'Topic', 'activityType': 'Activity Type'}
+    TITLE_MAP = {'countryCode': 'Country', 'name': 'Organisation', 'topic_name': 'Topic', 'activityType': 'Organisation Type'}
 
     agg_dict = {'projectID': lambda x: x.explode().nunique(), 'netEcContribution': 'sum',
                 **({'name': 'nunique'} if by_col != 'name' else {})}

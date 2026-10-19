@@ -1,10 +1,8 @@
 import json
-import urllib.request
 
-import httpx
 import dash_bootstrap_components as dbc
 from dash import html, dcc
-from utils import BASE_URL, API_KEY, projects_tbl
+from utils import projects_tbl
 
 PROJECT_COLUMNS = ["projectID", "title", "fp", "topic_name_hierarchy", "participants", "objective",
                    "acronym", "n_deliverables", "n_publications"]
@@ -12,7 +10,7 @@ PROJECT_COLUMNS = ["projectID", "title", "fp", "topic_name_hierarchy", "particip
 def build_collapsible_table_section(label, project_id, section_key, has_rows):
     if label not in ("Deliverables", "Publications"):
         return None
-    if not has_rows:  # False o None → niente sezione
+    if not has_rows:  # False o None -> niente sezione
         return None
 
     toggle_id = {'type': 'section-toggle', 'project': project_id, 'section': section_key}
@@ -150,63 +148,3 @@ def build_table_content(rows, link_phrase):
     ])
     return dbc.Table([table_header, table_body], bordered=False, hover=True, size="sm", color="light", className="mt-2 mb-0")
 
-
-async def call_relevance_api(project_id, query):
-    row = (
-        projects_tbl.search()
-        .select(["projectID", "title", "objective"])
-        .where(f"projectID IN ({project_id})")
-        .to_arrow()
-    )
-    title = row["title"][0].as_py()
-    objective = row["objective"][0].as_py()
-
-    async with httpx.AsyncClient(timeout=120) as client:
-        response = await client.post(
-            "http://research-llm-api-matita:8060/v1/project/relevance",
-            #headers={"X-API-Key": API_KEY},
-            json={
-                "project": {
-                    "title": title,
-                    "objective": objective,
-                },
-                "query_context": {
-                    "query_text": query,
-                },
-            },
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data.get("explanation", "Explainability bot not available at the moment.")
-
-
-def call_relevance_api_old(project_id, query):
-    row = (
-            projects_tbl.search()
-            .select(["projectID", "title", "objective"])
-            .where(f"projectID IN ({project_id})")
-            .to_arrow()
-        )   
-    title = row["title"][0].as_py()
-    objective = row["objective"][0].as_py()       
-    payload = {
-        "project": {
-            "title": title,
-            "objective": objective,
-        },
-        "query_context": {
-            "query_text": query,
-        },
-    }
-
-    req = urllib.request.Request(
-        f"{BASE_URL}/v1/project/relevance",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", "X-API-Key": API_KEY},
-        method="POST",
-    )
-
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        result = json.load(resp)
-
-    return result.get("explanation", "Explainability bot not available at the moment.")

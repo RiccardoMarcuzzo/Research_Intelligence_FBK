@@ -11,9 +11,10 @@ from dash.exceptions import PreventUpdate
 
 from utils import TITLE, COUNTRY_CODES, topic_names, deliverables_tbl, publications_tbl
 import scripts._rag as script
-from scripts._rag__projects_list import build_accordion_items, build_table_content, call_relevance_api
+from scripts._rag__projects_list import build_accordion_items, build_table_content
 from scripts._rag__aggregated_view import build_aggregated_view, build_aggregated_graphs, build_graph
 from scripts._rag__projects_graph import build_project_graph, build_overview_figure, build_topic_detail_figure
+from scripts._explainability_api import call_relevance_api
 
 PAGE_TITLE = "RAG"
 

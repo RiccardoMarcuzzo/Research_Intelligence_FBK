@@ -195,44 +195,6 @@ layout = html.Div([
         ),
     ]),
 
-    # CHAT
-    dbc.Row([
-        dbc.Col([
-            html.Img(src='assets/img/placeholder-org.jpg', style={'width': '100%', 'height': '100%', 'objectFit': 'cover'})
-        ], width=4, style={'height': '283px', 'overflow': 'hidden'}),
-
-        dbc.Col([
-            html.H4('Page: Chat', className="fw-bold mt-2"),
-            html.P(
-                "Under development.",
-                className="text-muted mt-4",
-                style={'fontSize': '1.1rem', 'lineHeight': '1.6'}
-            )
-        ], width=4),
-
-        dbc.Col([
-            dbc.Card([
-                dbc.CardBody([
-                    html.Div([
-                        html.I(className="bi bi-building", style={'fontSize': '3rem', 'color': '#0d6efd'}),
-                    ], className="text-center mb-3"),
-                    html.H4("Chat", className="card-title text-center fw-bold"),
-                    html.P(
-                        "Under development.",
-                        className="card-text text-muted",
-                        style={'fontSize': '0.95rem', 'lineHeight': '1.6'}
-                    ),
-                    html.Div([
-                        dcc.Link(
-                            dbc.Button("Chat with the database →", color="primary", className="w-100 mt-3"),
-                            href="concept"
-                        )
-                    ])
-                ])
-            ], className="shadow-sm")
-        ], width=4),
-    ], className="mb-5"),
-
     # QUERY SEARCH
     dbc.Row([
         dbc.Col([
