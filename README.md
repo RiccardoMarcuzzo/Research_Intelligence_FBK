@@ -62,4 +62,5 @@ It shows the results of the "Project list" tab as a collaboration graph, grouped
 
 Two projects are connected if they share the topic and at least N participant organisations. N can be changed with the slider; hovering over a connection shows the shared organisations. In this way, users can find projects that are thematically similar to the retrieved ones and see who collaborates with whom. The graph is not generated if the results are 500 or more.
 
-<img width="1801" height="850" alt="Screenshot from 2026-07-21 14-34-09" src="https://github.com/user-attachments/assets/7b63a5ee-ab34-4848-adbb-8b42c96c00e3" />
+<img width="1310" height="753" alt="Screenshot 2026-10-20 alle 14 30 34" src="https://github.com/user-attachments/assets/3f5a9969-8fa8-4bca-bedb-729ef2867312" />
+
