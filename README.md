@@ -57,9 +57,9 @@ It is possible to define the comparison metric: number of projects participated,
 
 <img width="1803" height="852" alt="Screenshot from 2026-07-21 14-33-29" src="https://github.com/user-attachments/assets/b630d52b-482e-4b1f-b84d-3654f4694dc1" />
 
-#### Tab "Latent space"
-It projects the results shown in the "Project list" tab onto a different latent space. Coloured points are for the results. Grey points are the neighbours of those results in the new latent space.
+#### Tab "Projects graph"
+It shows the results of the "Project list" tab as a collaboration graph, grouped by topic. Every box is a topic: click on it to explore its projects, and use the "Back" button to return to the overview. Coloured points are the results. Grey points are their neighbours in the same topic. If the custom input is defined, points are coloured by relevance towards the input.
 
-The new latent space is the same as the one used for the topic modeling. In this way, users can explore a different view on the projects, and found thematic-similar projects to the ones retrieved.
+Two projects are connected if they share the topic and at least N participant organisations. N can be changed with the slider; hovering over a connection shows the shared organisations. In this way, users can find projects that are thematically similar to the retrieved ones and see who collaborates with whom. The graph is not generated if the results are 500 or more.
 
 <img width="1801" height="850" alt="Screenshot from 2026-07-21 14-34-09" src="https://github.com/user-attachments/assets/7b63a5ee-ab34-4848-adbb-8b42c96c00e3" />
