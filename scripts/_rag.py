@@ -168,7 +168,7 @@ def retrieve_results_df(fp_list, country_list, typeorg_list, org_list, topic_lis
         return new_project_ids, results_part.to_pandas().to_json(orient='split')
 
     # FALLBACK: ricerca dei progetti più soddisfacenti per la query.
-    # Si attiva quando i risultati molto simili sono meno di 5.
+    # Si attiva quando i risultati molto simili sono meno di 50.
     # Empiricamente, in questi casi vale la pena il rischio di overfitting per 
     # cercare più dati.
 

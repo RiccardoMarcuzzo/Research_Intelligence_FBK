@@ -1,6 +1,12 @@
+# Dipendenze di tutto il progetto: dashboard (app.py) e pipeline di aggiornamento (data_update/).
+# Un solo ambiente Python 3.12 per entrambe. Dopo l'installazione, per la pipeline:
+#   python -c "import nltk; nltk.download('stopwords')"
+# Le versioni sono quelle con cui sono stati eseguiti i test (data_update/test.py,
+# compresi quelli con i modelli reali) e verificate anche sulla dashboard.
+
+# --- dashboard ---
 dash[async]==3.2.0
 dash_bootstrap_components==2.0.4
-dotenv==0.9.9
 Flask==3.1.2
 httpx==0.28.1
 lancedb==0.36.0
@@ -12,5 +18,35 @@ pandas==2.3.2
 plotly==6.3.0
 protobuf==5.29.5
 pyarrow==22.0.0
-torch==2.9.1
-transformers==4.51.3
+stopwordsiso==0.6.1
+python-dotenv==1.2.4
+setuptools<81            # stopwordsiso usa pkg_resources, rimosso da setuptools 81
+
+# --- embedding e topic modelling (dashboard e pipeline) ---
+# transformers 4.57.6 serve a `adapters` (Specter2); la dashboard funziona con la stessa versione
+torch==2.14.1
+transformers==4.57.6
+
+# --- pipeline di aggiornamento (data_update/) ---
+scipy==1.18.1
+scikit-learn==1.9.1
+FlagEmbedding==1.4.2
+adapters==1.3.0
+bertopic==0.17.4
+umap-learn==0.5.12
+hdbscan==0.8.44
+nltk==3.10.3
+tqdm==4.70.1
+
+# revisione dei topic nuovi a terminale
+questionary==2.1.1
+rich==15.0.0
+
+# estrazione dei deliverables (legacy_extract_deliverables.py)
+openai==3.31.0
+pymupdf==1.28.2
+pymupdf4llm==1.28.2
+docling==2.139.0
+
+# test
+pytest==9.1.1
