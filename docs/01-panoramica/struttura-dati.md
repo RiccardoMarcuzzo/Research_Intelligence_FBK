@@ -1,0 +1,183 @@
+# Struttura dei dati
+
+> **Scopo:** pagina di riferimento su cosa c'è nella cartella `data/` e negli altri file generati dalla pipeline, come sono fatte le tabelle, che cosa contengono i grafi dei progetti, come sono fatti i due formati dell'export CORDIS e come vengono gestiti deliverables e publications. Da consultare quando si lavora sui dati o sul codice che li legge.
+
+I numeri riportati (righe, dimensioni) sono quelli del db al 2026-10-22, dopo l'aggiornamento con l'export del 2026-10-15.
+
+## Cosa c'è in `data/`
+
+La cartella `data/` **non è in git** (è nel `.gitignore`) e senza di essa la dashboard non parte. La scrive la pipeline di aggiornamento e la legge la dashboard.
+
+| Elemento | Contenuto | Letto da |
+|---|---|---|
+| `projects_uncase.lance` | Un record per progetto: testo, topic, partecipanti (nomi), conteggi, embedding bge-m3 | dashboard, pipeline |
+| `participants.lance` | Un record per coppia progetto-organizzazione (e paese) | dashboard, pipeline |
+| `deliverables.lance` | Deliverables per progetto | dashboard, pipeline |
+| `publications.lance` | Pubblicazioni per progetto | dashboard |
+| `organisations.json` | Dizionario `{organisationID: nome}` con i nomi puliti delle organizzazioni (62.392 voci) | pipeline |
+| `topic2hier.json` | Gerarchia dei topic (formato in [Review dei topic](../03-aggiornamento-dati/review-topic.md#28-formato-di-topic2hierjson)) | dashboard (indirettamente), pipeline |
+| `project_graphs/` | Grafi di collaborazione, un file JSON per topic (vedi sotto) | dashboard |
+| `bge-m3-onnx/` | Modello bge-m3 in formato ONNX, per trasformare in vettore il testo libero della ricerca (circa 2 GB) | dashboard |
+| `old_topic_model/` | Modello BERTopic dei topic ([Review dei topic](../03-aggiornamento-dati/review-topic.md#21-il-modello-dei-topic)) | pipeline |
+| `specter2.parquet` | Embedding Specter2 di ogni progetto ([Review dei topic](../03-aggiornamento-dati/review-topic.md#210-archivio-degli-embedding-specter2)) | pipeline |
+| `backups/` | Copie automatiche di modello e gerarchia e log degli spostamenti | pipeline |
+
+Due file generati dalla pipeline stanno invece in `assets/` (e quindi in git): `treemap.json` (la treemap di Concept) e `dmp_for_dash.html` (la mappa di Concept, non generata dalla pipeline: vedi [Pagina Concept](../02-dashboard/pagina-concept.md)).
+
+Quali file vengono modificati da ogni passo dell'aggiornamento è in [Eseguire l'aggiornamento dei dati](../03-aggiornamento-dati/eseguire-update-db.md#cosa-viene-modificato).
+
+## Tabelle LanceDB
+
+Le quattro tabelle sono aperte da `utils.py` all'avvio della dashboard. Gli id dei progetti sono interi (`int32`; fa eccezione `publications`, che usa `int64`).
+
+### `projects_uncase`
+
+Un record per progetto (59.344).
+
+| Colonna | Tipo | Contenuto |
+|---|---|---|
+| `projectID` | int32 | Id del progetto in CORDIS |
+| `title`, `objective`, `acronym` | stringa | Testi del progetto |
+| `fp` | int8 | Programma quadro: `8` Horizon 2020, `9` Horizon Europe |
+| `topic_name` | stringa | Nome del topic (il primo livello non `Unlabelled`) |
+| `topic_name_hierarchy` | lista di 4 stringhe | Dalla foglia alla macro-area, allineata a destra con `Unlabelled` |
+| `participants` | lista di stringhe | Nomi delle organizzazioni partecipanti, senza duplicati |
+| `n_deliverables`, `n_publications` | int16 | Conteggi mostrati dalla dashboard |
+| `vector` | lista fissa di 1024 float | Embedding bge-m3 di titolo e obiettivo, usato dalla ricerca con testo libero |
+
+Un progetto appena aggiunto ha `participants` vuoto fino allo step 2 di `update_db.py`.
+
+### `participants`
+
+Un record per ogni **progetto, organizzazione e paese** (325.173). 
+
+| Colonna | Tipo | Contenuto |
+|---|---|---|
+| `projectID` | int32 | Il progetto |
+| `organisationID` | int32 | Id dell'organizzazione in CORDIS |
+| `name` | stringa | Nome pulito (da `organisations.json`) |
+| `countryCode` | stringa | Paese |
+| `activityType` | stringa | `HES`, `PRC`, `REC`, `OTH`, `PUB` |
+| `role` | stringa | `participant`, `coordinator`, `associatedPartner`, `thirdParty`, `partner`, `internationalPartner` |
+| `netEcContribution` | double | Contributo UE all'organizzazione per il progetto (arrotondato all'euro quando viene scritto) |
+| `fp`, `topic_name`, `topic_name_hierarchy` | come sopra | **Copiati dal progetto** |
+
+Poiché `fp` e i topic sono copiati dal progetto, quando un progetto cambia topic vanno riscritte **entrambe** le tabelle (lo fanno `update_db.py` e `reassign_existing.py`).
+
+### `deliverables`
+
+Un record per deliverable (224.838).
+
+| Colonna | Tipo | Contenuto |
+|---|---|---|
+| `projectID` | int32 | Il progetto |
+| `title` | stringa | Titolo del deliverable |
+| `physUrl` | stringa | Link al documento (può mancare) |
+| `authors` | stringa JSON | `{"Nome Cognome": "Affiliazione"}`; `"{}"` se sconosciuti; l'affiliazione `Unknown` significa sconosciuta |
+| `id` | stringa | Id CORDIS del deliverable (es. `101069359_20_DELIVHORIZON`); `null` nelle righe scritte dalla vecchia pipeline |
+
+### `publications`
+
+Un record per pubblicazione (503.067).
+
+| Colonna | Tipo | Contenuto |
+|---|---|---|
+| `projectID` | int64 | Il progetto |
+| `title` | stringa | Titolo |
+| `authors` | stringa JSON | Come nei deliverables |
+| `physUrl` | stringa | Link alla pubblicazione (tipicamente Scopus) |
+
+La pipeline **non modifica** questa tabella (vedi "Deliverables e publications").
+
+### Indici
+
+| Tabella | Indici |
+|---|---|
+| `projects_uncase` | `projectID` (BTree), `topic_name_hierarchy` (LabelList) |
+| `participants` | `projectID` (BTree), `countryCode`, `activityType`, `fp` (Bitmap) |
+| `deliverables` | `projectID`, `id` (BTree) |
+| `publications` | `projectID` (BTree) |
+
+### Due regole che la dashboard richiede
+
+`data_update/lance_maintenance.py` le impone sulle tabelle `projects_uncase` e `participants`. `update_db.py` lo esegue a ogni avvio; si può lanciare anche da solo (da `data_update/`, `python lance_maintenance.py --data ../data`), per esempio su un db aggiornato con una versione precedente della pipeline.
+
+1. **Nessun indice vettoriale su `projects_uncase.vector`.** La dashboard scarta i risultati con distanza coseno oltre 0,45. Un indice IVF_PQ restituisce distanze approssimate molto più alte di quelle vere (circa 0,76 invece di 0,41) e la ricerca con testo libero tornerebbe vuota. Senza indice la ricerca è esatta e sui circa 59.000 progetti resta veloce.
+2. **Nessuna colonna di tipo dictionary** (`topic_name`, `role`). Le righe aggiunte in seguito hanno un dizionario proprio e `to_pandas()` su risultati che mescolano righe vecchie e nuove fallisce con l'errore `Categorical categories must be unique`. Le colonne vengono riscritte come stringhe: per la dashboard non cambia nulla.
+
+I test leggono le tabelle con un semplice `to_pandas()`, come la dashboard, quindi questi due problemi emergono come test falliti.
+
+## Grafi dei progetti e treemap
+
+### Grafi in `data/project_graphs/`
+
+Il tab "Project graph" della pagina Query non calcola nulla durante la ricerca: legge file già pronti.
+
+- C'è **un file JSON per topic**, più un `_index.json` che associa il nome del topic al nome del file (oggi 204 voci). Il nome del file è il nome del topic con i caratteri speciali sostituiti da `_`.
+- Ogni file ha `topic_name`, `nodes` (`{projectID: {"title": ...}}`) e `edges` (`source`, `target`, `weight`, `collaborators`).
+- **Un arco collega due progetti dello stesso topic che hanno almeno un'organizzazione in comune**; `weight` è il numero di organizzazioni condivise e `collaborators` la loro lista. Il confronto è fatto sui **nomi** nella colonna `participants`.
+- Il grafo è per **nome di topic**: più id di topic con lo stesso nome (alias) condividono lo stesso file.
+- Il codice è `data_update/create_projgraph.py`. `rebuild_project_graphs` (in `reassign_existing.py`) lo esegue su tutti i progetti: lo fanno lo step 2 di `update_db.py` e, se i topic dei progetti cambiano, `reassign_existing.py`. I file dei topic spariti non vengono cancellati.
+- La dashboard legge i file alla prima richiesta e li tiene in memoria: dopo un aggiornamento serve riavviarla.
+
+### Treemap
+
+`assets/treemap.json` è la figura della treemap di Concept. La genera `data_update/generate_treemap.py` a partire da `topic2hier.json`: il valore di ogni nodo è il numero di progetti di `projects_uncase` che passano da quel nodo. `update_db.py` la rigenera alla fine dello step 1 e `reassign_existing.py` dopo gli spostamenti. Si può lanciare anche da sola (`python generate_treemap.py`). Dettagli in [Pagina Concept](../02-dashboard/pagina-concept.md#treemap).
+
+## Formati dell'export CORDIS
+
+CORDIS ha cambiato il formato del suo export JSON a maggio 2026. La pipeline legge entrambi i formati con `data_update/cordis_loader.py`, che sceglie quello giusto guardando il contenuto della cartella (`detect_format`). Errore se la cartella contiene entrambi i formati o nessuno dei due: in ogni cartella va tenuto un solo export.
+
+| | **legacy** | **records** |
+|---|---|---|
+| Struttura | file tabellari unici: `project.json`, `organization.json`, `webLink.json`, ... | un file per progetto, `project-rcn-<rcn>_en.json`, gerarchico come l'XML |
+| Nomi delle colonne | da `[columns]` in `settings.config` | fissi nel codice |
+| Titoli dei deliverables | non presenti | presenti |
+| Aggiornamento deliverables (step 3) | non possibile (lo step viene saltato) | possibile |
+
+`load_projects`, `load_organizations`, `load_weblinks` restituiscono gli stessi DataFrame per entrambi i formati, con i nomi di colonna usati da `update_db.py`:
+
+- progetti: `projectID, title, objective, fp, acronym`
+- organizzazioni: `organisationID, name, countryCode, activityType, role, netEcContribution, projectID`
+- link: `id, projectID, physUrl, type`
+- deliverables (solo records): `id, projectID, title, physUrl`
+
+### Come si leggono i file `records`
+
+| Campo | Da dove |
+|---|---|
+| `projectID` | `id` (stringa, convertita in intero) |
+| `fp` | Dalle associazioni `programme` collegate (`frameworkProgramme`, prima la base giuridica). Il valore (es. `HORIZON`) viene poi tradotto in codice numerico da `FP_DICT` in `update_db.py` |
+| Partecipanti | Associazioni `organization`: ruolo da `attributes.type`, nome da `legalName`, paese da `address.country`, contributo da `attributes.netEcContribution` (stringa, convertita in numero) |
+| `activityType` | La categoria `organizationActivityType`, con la barra iniziale tolta (`/PRC` diventa `PRC`) |
+| Deliverables | Associazioni `result` della collezione `/deliverable`; `id` come `101069359_20_DELIVHORIZON`; `title` ufficiale; `physUrl` dal `webLink` annidato di tipo `projectDeliverable` (assente in 827 deliverables su 63.000 nell'export del 2026-10-15) |
+
+Altre note:
+
+- I progetti del formato `records` sono ordinati per `projectID`. 
+- Un `id` non numerico lascia `projectID` come decimale e `update_db.py` si ferma con un messaggio.
+- Nello stesso progetto o tra progetti, deliverables con lo stesso id fanno fermare il caricamento.
+- L'export non contiene gli autori dei deliverables. Contiene anche una descrizione e un tipo del deliverable (`deliverableType`) che la pipeline deliberatamente non salva.
+- Le modifiche ai progetti già presenti nel db (obiettivi corretti, contributi rivisti, partner aggiunti o tolti, deliverables ricaricati con un nuovo link) non vengono applicate, salvo per i deliverables (step 3).
+
+## Deliverables e publications
+
+### Deliverables (step 3 di `update_db.py`)
+
+- La **fonte è l'export**, non un file parquet. I parametri `deliverables_file` e `deliverables_env_path` di `settings.config` li usa solo lo script di estrazione degli autori dai PDF (`legacy_extract_deliverables.py`, tenuto come riferimento).
+- Per ogni progetto dell'export (anche senza deliverables), la tabella segue l'export: titolo ufficiale e link correnti; i deliverables spariti da CORDIS vengono cancellati; le righe senza `id` (scritte dalla vecchia pipeline) vengono sostituite.
+- Gli **autori** si conservano: per `id`, altrimenti per `physUrl` dalle righe vecchie, altrimenti `"{}"`.
+- Le righe dei progetti **non presenti nell'export** (tutta la parte Horizon 2020, `id` nullo) non vengono toccate. Oggi: 63.280 righe con `id`, 161.558 senza, 174.794 con autori.
+- Le scritture vanno **prima** e le cancellazioni **dopo**, così un'interruzione non fa perdere autori. Una seconda esecuzione sullo stesso export non scrive niente.
+- `n_deliverables` in `projects_uncase` deve essere uguale al numero di righe del progetto in `deliverables` (compresi i deliverables senza link). Gli step 1 e 3 lo tengono allineato; lo step 3 scrive solo i conteggi cambiati.
+- Con un export `legacy` lo step 3 viene saltato (con `--deliverables` esplicito il programma si ferma).
+
+### Publications (step 4)
+
+**Da completare.** La tabella contiene pubblicazioni ottenute combinando CORDIS e Scopus, caricate fuori da questa pipeline. Lo step 4 apre la tabella e non fa altro: i progetti nuovi hanno `n_publications = 0` e nessuna riga in `publications`.
+
+## Cose da sapere sui dati
+
+- **Dati denormalizzati.** `fp` e i topic sono nelle due tabelle; un cambio di topic va scritto in entrambe.
+- **Download da browser.** Le cartelle `.lance` scaricate con un browser possono avere i file `_versions/*.manifest` rinominati in `*.manifest.appcache`: LanceDB poi segnala `Table ... was not found`. Basta togliere il suffisso.
+- **Riavvio.** La dashboard tiene in memoria l'elenco dei topic, i contatori e i grafi: dopo ogni aggiornamento va riavviata.
