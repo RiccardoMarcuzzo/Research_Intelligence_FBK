@@ -59,13 +59,3 @@ Parti della documentazione o del progetto che non sono ancora definite. Quando u
 |---|---|---|
 | 8 | **Rotazione dei programmi quadro**: dare un nome e un codice al nuovo programma (in `update_db.py` e nella dashboard) e decidere se rimuovere, oscurare o tenere il programma più vecchio | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#attenzione-rotazione-programmi-quadro) |
 | 9 | **Frequenza degli aggiornamenti**: consigliato ogni 4-6 mesi, ma la decide chi gestisce la piattaforma | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#quando-aggiornare) |
-
-## Convenzioni
-
-- **Una pagina, un argomento.** Se una pagina cresce troppo, si divide.
-- **Intestazione fissa:** ogni pagina inizia con `Scopo` (cosa tratta e quando leggerla) e `Stato` (`da scrivere`, `bozza`, `completa`).
-- **Runbook:** passi numerati, comandi copiabili, directory da cui lanciarli, output atteso.
-- **Nessuna duplicazione:** un'informazione vive in una sola pagina, le altre linkano.
-- **Aggiungere una pagina:** crea il file nella cartella giusta e aggiungi una riga in questo indice.
-- **Lingua:** italiano, termini tecnici in inglese.
-- I percorsi sono relativi alla radice della repo, salvo diversa indicazione.
