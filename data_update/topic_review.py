@@ -1,39 +1,48 @@
 # ------------------------------------------------------------------------------
 # Revisione dei possibili topic nuovi trovati da extract_topic.assign_topics.
-# Qui c'è solo la logica (gerarchia, controllo dei nomi, decisioni, aggiornamento
-# del modello); l'interfaccia a terminale è in topic_review_cli.py.
+# Qui c'è la logica (gerarchia, modello, spostamento dei progetti già nel db);
+# il foglio Excel che il revisore compila è in topic_review_sheet.py.
 #
-# Una decisione riguarda un insieme di progetti (project_ids) e può essere:
-#   accept      nuovo topic: entra in old_topic_model e in topic2hier con "path"
-#   remap       i progetti vanno al topic esistente con percorso "path"
-#   unlabelled  i progetti diventano Unlabelled; con alias=True il gruppo entra nel
-#               modello con percorso vuoto, così i progetti simili dei prossimi batch
-#               vengono scartati automaticamente
-#   nearest     i progetti tengono il topic esistente più vicino
-# I percorsi vanno dalla macro-area alla foglia (es. ["Engineering & Technology", ...]).
-# Una decisione accept può avere "existing_bonus": il topic nuovo prende anche i
-# progetti già nel db sotto soglia, con quel bonus (di solito negativo, cioè una
-# penalità); None o assente = i progetti già nel db non vengono toccati.
+# update_db.py scrive subito i progetti nuovi con un topic provvisorio (il topic più vicino
+# al cluster, Unlabelled per gli isolati) e un foglio con i candidati. Quando il revisore
+# l'ha compilato, update_db.py --review lo applica ai progetti già nel db.
+# Il revisore scrive un percorso (dalla macro-area alla foglia) per un cluster o per
+# un progetto isolato. I progetti con lo stesso percorso formano un unico topic:
+#   percorso vuoto        i progetti tengono il topic esistente più vicino
+#   percorso già presente in topic2hier   i progetti vanno a quel topic
+#   percorso nuovo        nasce un topic nuovo, in modello e gerarchia
+#   "Unlabelled"          i progetti diventano Unlabelled; per un cluster il gruppo entra
+#                         nel modello con percorso vuoto, così i progetti simili dei
+#                         prossimi batch vengono scartati automaticamente (per i progetti
+#                         isolati no: sono troppo diversi tra loro per un alias)
+# I topic nuovi prendono sempre anche i progetti già nel db sotto soglia (vedi
+# existing_moves), con una penalità fissa rispetto ai progetti nuovi.
 # ------------------------------------------------------------------------------
 
 import os
 import json
 import shutil
 import difflib
-import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from sklearn.feature_extraction.text import CountVectorizer
+
+from specter_store import load_store
+from create_projgraph import create_project_graph
 
 UNLABELLED = "Unlabelled"
+# chiave dei gruppi del foglio: progetti isolati marcati Unlabelled, che diventano Unlabelled
+# uno per uno senza entrare nel modello. Per un cluster Unlabelled vale () (alias nel modello)
+PLAIN_UNLABELLED = (UNLABELLED,)
+# topic "non assegnato": i progetti che il foglio non tocca (non è un id di topic valido)
+UNSET = -2
 DEPTH = 4
-ACTIONS = ("accept", "remap", "unlabelled", "nearest")
 # elenco dei topic creati dalla revisione, salvato nella cartella del modello
 REVIEWED_FILE = "reviewed_topics.json"
+TOPIC_TABLES = ("projects_uncase", "participants")
 
 
 class HierarchyError(ValueError):
@@ -42,6 +51,10 @@ class HierarchyError(ValueError):
 
 class ReviewAborted(Exception):
     pass
+
+
+class SheetError(ReviewAborted):
+    """Il foglio compilato contiene errori: il messaggio li elenca tutti."""
 
 
 # ==============================================================================
@@ -123,7 +136,7 @@ class Hierarchy:
         if len(set(path)) != len(path):
             raise HierarchyError("lo stesso nome compare due volte nel percorso")
         if path in self.leaves():
-            raise HierarchyError("esiste già un topic con questo percorso: usa la rimappatura")
+            raise HierarchyError("esiste già un topic con questo percorso")
         if path in self.categories():
             raise HierarchyError(f'"{path[-1]}" è già una categoria, non può essere un topic')
         for i in range(1, len(path)):
@@ -218,104 +231,38 @@ def save_with_backup(model, model_dir, hierarchy, hier_path, backup_dir, reviewe
 
 
 # ==============================================================================
-# DECISIONI
+# APPLICAZIONE DEL FOGLIO
 # ==============================================================================
-def batch_key(project_ids):
-    ids = ",".join(str(int(p)) for p in sorted(int(p) for p in project_ids))
-    return hashlib.sha1(ids.encode()).hexdigest()[:16]
-
-
-def validate_decision(d):
-    if d.get("action") not in ACTIONS:
-        raise ValueError(f"azione non valida: {d.get('action')}")
-    if not d.get("project_ids"):
-        raise ValueError("decisione senza progetti")
-    if d["action"] in ("accept", "remap") and not d.get("path"):
-        raise ValueError(f"la decisione {d['action']} richiede un percorso")
-    if d["action"] == "accept" and d.get("name") not in (None, d["path"][-1]):
-        raise ValueError("il nome deve coincidere con l'ultimo nodo del percorso")
-    if "existing_bonus" in d:
-        if d["action"] != "accept":
-            raise ValueError("existing_bonus vale solo per i topic accettati")
-        bonus = d["existing_bonus"]
-        if bonus is not None and (isinstance(bonus, bool) or not isinstance(bonus, (int, float))):
-            raise ValueError(f"existing_bonus non valido: {bonus}")
-
-
-class DecisionStore:
-    """Decisioni salvate su file a ogni passo: la revisione si può interrompere e riprendere."""
-
-    def __init__(self, path, batch, decisions=None):
-        self.path = path
-        self.batch = batch
-        self.decisions = list(decisions or [])
-
-    @classmethod
-    def load(cls, path):
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        for d in data["decisions"]:
-            validate_decision(d)
-        return cls(path, data.get("batch"), data["decisions"])
-
-    def add(self, decision):
-        decision = dict(decision)
-        decision["project_ids"] = [int(p) for p in decision["project_ids"]]
-        if decision.get("path"):
-            decision["path"] = list(decision["path"])
-        validate_decision(decision)
-        self.decisions.append(decision)
-        self.save()
-
-    def set_field(self, index, key, value):
-        decision = {**self.decisions[index], key: value}
-        validate_decision(decision)
-        self.decisions[index] = decision
-        self.save()
-
-    def covered(self):
-        return {p for d in self.decisions for p in d["project_ids"]}
-
-    def save(self):
-        if not self.path:
-            return
-        tmp = f"{self.path}.tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"batch": self.batch, "decisions": self.decisions}, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, self.path)
-
-
-def apply_decisions(decisions, project_ids, topics, embeddings, documents, model, hierarchy,
-                    reviewed_topics=None):
-    """Applica le decisioni in ordine. Restituisce i topic aggiornati e True se modello
-    e gerarchia sono stati modificati (e vanno quindi salvati). I topic creati vengono
-    aggiunti a reviewed_topics."""
+def apply_groups(groups, project_ids, topics, embeddings, documents, model, hierarchy,
+                 reviewed_topics=None):
+    """groups: {percorso: [projectID]} come lo restituisce il foglio (() = cluster
+    Unlabelled, con alias nel modello; PLAIN_UNLABELLED = isolati Unlabelled, senza
+    alias). Restituisce i topic aggiornati, i topic nuovi con un percorso
+    [(topic_id, percorso)] e True se modello e gerarchia sono stati modificati (e vanno
+    salvati). I topic creati vengono aggiunti a reviewed_topics."""
     if reviewed_topics is None:
         reviewed_topics = set()
     topics = np.array(topics, copy=True)
     pos = {int(p): i for i, p in enumerate(project_ids)}
-    changed = False
-    for d in decisions:
-        validate_decision(d)
-        idx = [pos[int(p)] for p in d["project_ids"] if int(p) in pos]
-        if not idx or d["action"] == "nearest":
-            continue
-        if d["action"] == "remap":
-            target = hierarchy.topic_for_path(d["path"])
-            if target is None:
-                raise HierarchyError(f"nessun topic con percorso {' > '.join(d['path'])}")
-            topics[idx] = target
-        elif d["action"] == "unlabelled" and not d.get("alias", True):
+    created, changed = [], False
+    for path, ids in groups.items():
+        idx = [pos[int(p)] for p in ids]
+        if path == PLAIN_UNLABELLED:
             topics[idx] = -1
-        else:
-            new_id = next_topic_id(model)
-            path = tuple(d["path"]) if d["action"] == "accept" else ()
-            hierarchy.add(new_id, path)
-            add_topic_to_model(model, embeddings[idx], [documents[i] for i in idx], new_id)
-            reviewed_topics.add(new_id)
-            topics[idx] = new_id
-            changed = True
-    return topics, changed
+            continue
+        target = hierarchy.topic_for_path(path) if path else None
+        if target is not None:
+            topics[idx] = target
+            continue
+        new_id = next_topic_id(model)
+        hierarchy.add(new_id, path)
+        add_topic_to_model(model, embeddings[idx], [documents[i] for i in idx], new_id)
+        reviewed_topics.add(new_id)
+        topics[idx] = new_id
+        changed = True
+        if path:
+            created.append((new_id, path))
+    return topics, created, changed
 
 
 # ==============================================================================
@@ -333,11 +280,11 @@ class ExistingProjects:
 @dataclass
 class Target:
     """Topic nuovo che può prendere progetti già nel db, con il suo bonus."""
-    key: object               # identifica il topic per chi chiama (indice della decisione, id...)
+    key: object               # identifica il topic per chi chiama (di solito l'id)
     centroid: np.ndarray
     path: tuple
     bonus: float
-    topic_id: int = None      # id nel modello, se il topic è già stato aggiunto
+    topic_id: int = None      # id nel modello
 
 
 MOVE_COLUMNS = ["projectID", "title", "from_topic", "from_hierarchy", "key", "topic_id",
@@ -408,28 +355,73 @@ def existing_moves(model, reviewed_topics, existing, targets, similarity_thresho
             .drop(columns=["_t", "_m"]).reset_index(drop=True))
 
 
-def accept_targets(decisions, project_ids, embeddings, default_bonus=None, override=None):
-    """Un Target per ogni decisione accept che può prendere progetti già nel db
-    (key = indice della decisione). Il centroide è quello che add_topic_to_model
-    mette nel modello. Bonus: override[i], altrimenti existing_bonus della
-    decisione, altrimenti default_bonus; None esclude il topic."""
-    override = override or {}
-    pos = {int(p): i for i, p in enumerate(project_ids)}
-    targets = []
-    for i, d in enumerate(decisions):
-        if d["action"] != "accept":
-            continue
-        bonus = override[i] if i in override else d.get("existing_bonus", default_bonus)
-        idx = [pos[int(p)] for p in d["project_ids"] if int(p) in pos]
-        if bonus is None or not idx:
-            continue
-        targets.append(Target(key=i, centroid=np.asarray(embeddings)[idx].mean(axis=0),
-                              path=tuple(d["path"]), bonus=float(bonus)))
-    return targets
+def load_existing(projects_tbl, store_path, exclude_ids=()):
+    """Progetti del db con il loro embedding Specter2, esclusi exclude_ids.
+    None se l'archivio degli embedding non esiste."""
+    store = load_store(store_path)
+    if store is None:
+        return None
+    store_ids, store_embs = store
+    df = (projects_tbl.search()
+          .select(["projectID", "title", "topic_name_hierarchy"])
+          .limit(None)
+          .to_pandas())
+    df = df[~df["projectID"].isin(set(int(p) for p in exclude_ids))]
+    row = pd.Series(np.arange(len(store_ids)), index=store_ids)
+    missing = ~df["projectID"].isin(row.index)
+    if missing.any():
+        print(f"WARNING: {missing.sum()} projects in the db have no Specter2 embedding in {store_path}: "
+              "they cannot be reassigned to new topics.")
+    df = df[~missing]
+    return ExistingProjects(
+        project_ids=df["projectID"].to_numpy(),
+        embeddings=store_embs[row.loc[df["projectID"]].to_numpy()],
+        titles=df["title"].fillna("").astype(str).tolist(),
+        hierarchies=[[str(x) for x in h] if h is not None else [] for h in df["topic_name_hierarchy"]],
+    )
+
+
+def write_moves(db, moves, log_dir, note=None):
+    """Scrive i nuovi topic in projects_uncase e participants. Restituisce il file di
+    log (progetti spostati, topic di prima, versioni delle tabelle prima della modifica)."""
+    if moves.empty:
+        return None
+    tables = {name: db.open_table(name) for name in TOPIC_TABLES}
+    versions = {name: tbl.version for name, tbl in tables.items()}
+    for hier, group in moves.groupby(moves["topic_name_hierarchy"].map(tuple), sort=False):
+        ids = ", ".join(str(int(p)) for p in group["projectID"])
+        values = {"topic_name": group["topic_name"].iloc[0], "topic_name_hierarchy": list(hier)}
+        for tbl in tables.values():
+            tbl.update(where=f"projectID IN ({ids})", values=values)
+
+    os.makedirs(log_dir, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = os.path.join(log_dir, f"reassign_{stamp}.json")
+    log = {
+        "note": note,
+        "versions_before": versions,
+        "moves": [{
+            "projectID": int(m.projectID),
+            "topic_id": None if pd.isna(m.topic_id) else int(m.topic_id),
+            "from": list(m.from_hierarchy),
+            "to": list(m.topic_name_hierarchy),
+        } for m in moves.itertuples()],
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=1)
+    return path
+
+
+def rebuild_project_graphs(projects_tbl, out_dir):
+    projects = (projects_tbl.search()
+                .select(["projectID", "title", "topic_name", "participants"])
+                .limit(None)
+                .to_pandas())
+    create_project_graph(projects, out_dir)
 
 
 # ==============================================================================
-# SCHEDE DEI CLUSTER
+# PUNTO DI INGRESSO
 # ==============================================================================
 @dataclass
 class ReviewContext:
@@ -440,23 +432,14 @@ class ReviewContext:
     embeddings: np.ndarray
     topics: np.ndarray        # topic esistente più vicino
     similarity: np.ndarray
-    report: pd.DataFrame
+    report: pd.DataFrame      # candidati: cluster, cluster_keywords, projectID, similarity, nearest_topic, ...
     model: object
     hierarchy: Hierarchy
     reviewed_topics: set = field(default_factory=set)   # topic creati da revisioni precedenti
     existing: ExistingProjects = None   # progetti già nel db (None: non vengono toccati)
     similarity_threshold: float = 0.92
-    existing_bonus: float = -0.005      # bonus proposto per i progetti già nel db
-
-
-@dataclass
-class ClusterSummary:
-    cluster: int
-    indices: list             # posizioni nel batch, dalle più vicine al centroide
-    keywords: str
-    mean_similarity: float
-    similar_topics: list      # [(topic_id, percorso, similarità)]
-    name_suggestions: list
+    existing_bonus: float = -0.005      # bonus dei topic nuovi per i progetti già nel db
+    current_names: dict = None          # projectID -> topic_name nel db (None: nessun controllo)
 
 
 def _cos(a, b):
@@ -479,83 +462,42 @@ def similar_topics(model, hierarchy, centroid, n=5):
     return out
 
 
-def name_suggestions(titles, keywords, n=6):
-    out = []
-    try:
-        vec = CountVectorizer(ngram_range=(2, 2), stop_words="english")
-        counts = np.asarray(vec.fit_transform(titles).sum(axis=0)).ravel()
-        words = vec.get_feature_names_out()
-        out += [words[i].title() for i in np.argsort(counts)[::-1][:3] if counts[i] > 1]
-    except ValueError:  # titoli senza bigrammi utili
-        pass
-    out += [k.strip().title() for k in keywords.split(",") if k.strip()][:3]
-    return list(dict.fromkeys(out))[:n]
-
-
-def summarize_clusters(ctx, n_similar=5):
-    pos = {int(p): i for i, p in enumerate(ctx.project_ids)}
-    out = []
-    for cluster, group in ctx.report.groupby("cluster", sort=False):
-        if cluster < 0:
-            continue
-        idx = [pos[int(p)] for p in group["projectID"]]
-        centroid = ctx.embeddings[idx].mean(axis=0)
-        order = np.argsort(_cos(ctx.embeddings[idx], centroid))[::-1]
-        idx = [idx[i] for i in order]
-        keywords = str(group["cluster_keywords"].iloc[0]) if group["cluster_keywords"].notna().any() else ""
-        out.append(ClusterSummary(
-            cluster=int(cluster),
-            indices=idx,
-            keywords=keywords,
-            mean_similarity=float(ctx.similarity[idx].mean()),
-            similar_topics=similar_topics(ctx.model, ctx.hierarchy, centroid, n_similar),
-            name_suggestions=name_suggestions([ctx.titles[i] for i in idx], keywords),
-        ))
-    return out
-
-
-def isolated_indices(ctx):
-    pos = {int(p): i for i, p in enumerate(ctx.project_ids)}
-    return [pos[int(p)] for p in ctx.report.loc[ctx.report["cluster"] < 0, "projectID"]]
-
-
-# ==============================================================================
-# PUNTO DI INGRESSO
-# ==============================================================================
-def review_and_apply(ctx, mode, decisions_path, model_dir, hier_path, backup_dir,
-                     prompter=None, console=None):
-    """mode: "none" (topic più vicino), "file" (riapplica decisions_path) o "interactive".
+def review_and_apply(ctx, mode, sheet_path, model_dir, hier_path, backup_dir):
+    """mode: "none" (ogni progetto tiene ctx.topics), "provisional" (scrive in sheet_path il
+    foglio da compilare; ctx.topics sono già i topic provvisori) o "sheet" (applica il
+    foglio compilato: i progetti che non tocca restano a UNSET se ctx.topics lo è).
     Restituisce i topic finali e i progetti già nel db da spostare sui topic nuovi
     (vedi existing_moves); se servono, salva modello e gerarchia con backup."""
     no_moves = pd.DataFrame(columns=MOVE_COLUMNS)
     if mode == "none":
         return ctx.topics, no_moves
-    if mode == "file":
-        store = DecisionStore.load(decisions_path)
-        if store.batch != batch_key(ctx.project_ids):
-            print(f"WARNING: {decisions_path} was written for a different batch; "
-                  "decisions are applied to the matching projects only.")
-    elif mode == "interactive":
-        if ctx.report.empty:
-            print("No candidate new topics to review.")
-            return ctx.topics, no_moves
-        from topic_review_cli import run_review
-        store = run_review(ctx, decisions_path, prompter=prompter, console=console)
-    else:
+    if mode not in ("provisional", "sheet"):
         raise ValueError(f"modalità di revisione non valida: {mode}")
 
-    previous_reviewed = set(ctx.reviewed_topics)
-    topics, changed = apply_decisions(store.decisions, ctx.project_ids, ctx.topics, ctx.embeddings,
-                                      ctx.documents, ctx.model, ctx.hierarchy, ctx.reviewed_topics)
+    from topic_review_sheet import write_review_sheet, read_review_sheet
+    if mode == "provisional":
+        if ctx.report.empty:
+            print("No candidate new topics to review.")
+        else:
+            write_review_sheet(ctx, sheet_path)
+        return ctx.topics, no_moves
 
-    # progetti già nel db: stessi centroidi messi nel modello; i topic accettati senza
-    # existing_bonus non concorrono, quelli delle revisioni precedenti sì
-    targets = accept_targets(store.decisions, ctx.project_ids, ctx.embeddings)
+    groups, warnings = read_review_sheet(sheet_path, ctx)
+    for w in warnings:
+        print(f"WARNING: {w}")
+
+    previous_reviewed = set(ctx.reviewed_topics)
+    topics, created, changed = apply_groups(groups, ctx.project_ids, ctx.topics, ctx.embeddings,
+                                            ctx.documents, ctx.model, ctx.hierarchy, ctx.reviewed_topics)
+
+    # progetti già nel db: ogni topic nuovo con un percorso concorre con il suo centroide;
+    # gli alias Unlabelled e i topic delle revisioni precedenti sono solo concorrenti
+    targets = [Target(key=topic_id, centroid=ctx.model.topic_embeddings_[topic_id + ctx.model._outliers],
+                      path=path, bonus=ctx.existing_bonus, topic_id=topic_id)
+               for topic_id, path in created]
     if targets and ctx.existing is None:
         print("WARNING: no Specter2 embeddings for the projects already in the db: "
               "they are not reassigned to the new topics.")
-    for t in targets:
-        t.topic_id = ctx.hierarchy.topic_for_path(t.path)
     moves = existing_moves(ctx.model, ctx.reviewed_topics, ctx.existing, targets,
                            ctx.similarity_threshold, ctx.existing_bonus, competitors=previous_reviewed)
 

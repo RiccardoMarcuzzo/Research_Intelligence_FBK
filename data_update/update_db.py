@@ -15,6 +15,7 @@ import os
 import sys
 import argparse
 import json
+from datetime import date
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -26,13 +27,12 @@ from lancedb.index import BTree, LabelList, Bitmap
 from pandas.api.types import is_integer_dtype
 
 from extract_embedding import extract_bgem3
-from extract_topic import assign_topics
-from topic_review import ReviewAborted
+from extract_topic import assign_topics, apply_review_sheet
+from topic_review import ReviewAborted, write_moves, rebuild_project_graphs
 from format_name import format_name
 from cordis_loader import load_projects, load_organizations, load_deliverables, detect_format, CordisFormatError
 from lance_maintenance import repair_tables
 from specter_store import update_store, embeddings_for
-from reassign_existing import load_existing, write_moves, rebuild_project_graphs
 from generate_treemap import write_treemap, load_topic2hier
 
 parser = argparse.ArgumentParser(description="Updates Research Intelligence data.")
@@ -43,11 +43,19 @@ parser.add_argument("--publications", action="store_true", help="updates publica
 parser.add_argument("--config", type=Path,
                     default=Path(__file__).with_name("settings.config"),
                     help="percorso del file di configurazione (default: settings.config accanto allo script)")
-parser.add_argument("--no-review", action="store_true",
-                    help="non rivedere i possibili topic nuovi: ogni progetto tiene il topic esistente più vicino")
-parser.add_argument("--decisions", type=Path,
-                    help="riapplica le decisioni sui topic salvate in questo file, senza revisione interattiva")
+review_group = parser.add_mutually_exclusive_group()
+review_group.add_argument("--no-review", action="store_true",
+                          help="non scrivere il foglio dei possibili topic nuovi: ogni progetto tiene il topic "
+                               "esistente più vicino")
+review_group.add_argument("--review", type=Path, metavar="FILE",
+                          help="applica il foglio Excel dei topic nuovi compilato ai progetti già nel db, poi "
+                               "termina (non si combina con gli step). Senza questa opzione, se ci sono possibili "
+                               "topic nuovi, i progetti ricevono un topic provvisorio e si scrive il foglio da "
+                               "compilare, con la data nel nome")
 args = parser.parse_args()
+if args.review and (args.projects or args.participants or args.deliverables or args.publications):
+    parser.error("--review applica il foglio e termina: non si combina con --projects, --participants, "
+                 "--deliverables, --publications")
 
 no_flags = not (args.projects or args.participants or args.deliverables or args.publications)
 UPDATE_PROJECTS = args.projects or no_flags
@@ -88,18 +96,16 @@ BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../data/backups')
 # topic modelling dei nuovi progetti
 TOPIC_SIM_THRESHOLD = config.getfloat('topics', 'similarity_threshold', fallback=0.92)
 TOPIC_MIN_CLUSTER_SIZE = config.getint('topics', 'min_cluster_size', fallback=5)
-TOPIC_REPORT_PATH = config.get('topics', 'candidates_report_file', fallback='new_data/topic_candidates.csv')
-TOPIC_DECISIONS_PATH = config.get('topics', 'decisions_file', fallback='new_data/topic_decisions.json')
+# foglio dei topic nuovi con la data nel nome: un secondo lancio nello stesso giorno lo sovrascrive,
+# in un altro giorno ne scrive uno nuovo
+_sheet_base, _sheet_ext = os.path.splitext(config.get('topics', 'review_file', fallback='new_data/topic_review.xlsx'))
+TOPIC_SHEET_PATH = f"{_sheet_base}_{date.today().isoformat()}{_sheet_ext}"
 TOPIC_REVIEWED_BONUS = config.getfloat('topics', 'reviewed_topic_bonus', fallback=0.02)
 TOPIC_EXISTING_BONUS = config.getfloat('topics', 'reviewed_topic_bonus_existing', fallback=-0.005)
 
-# revisione dei possibili topic nuovi: interattiva solo se c'è un terminale
-if args.decisions:
-    TOPIC_REVIEW, TOPIC_DECISIONS_PATH = 'file', str(args.decisions)
-elif args.no_review or not sys.stdin.isatty():
-    TOPIC_REVIEW = 'none'
-else:
-    TOPIC_REVIEW = 'interactive'
+# revisione dei possibili topic nuovi: i progetti entrano subito con un topic provvisorio e
+# il foglio Excel scritto da questo lancio si applica poi con --review
+TOPIC_REVIEW = 'none' if args.no_review else 'provisional'
 
 # nomi delle colonne del vecchio export (project.json, organization.json); il formato
 # con un file per progetto non li usa
@@ -112,6 +118,27 @@ db = lancedb.connect("../data")
 repair_tables(db)
 
 projects_tbl = db.open_table("projects_uncase")
+
+# --review: il foglio compilato si applica ai progetti già nel db (topic provvisori) e basta
+if args.review:
+    try:
+        changes = apply_review_sheet(db, str(args.review), SPECTER_STORE_PATH,
+                                     similarity_threshold=TOPIC_SIM_THRESHOLD,
+                                     existing_bonus=TOPIC_EXISTING_BONUS)
+    except (ReviewAborted, KeyboardInterrupt) as e:
+        print(f"\n{e or 'Interrupted'}\nNo database was modified.")
+        sys.exit(1)
+    if changes.empty:
+        print('Nothing to change.')
+    else:
+        log = write_moves(db, changes, BACKUP_DIR)
+        projects_tbl = db.open_table("projects_uncase")   # handle aggiornato dopo la scrittura
+        print(f'{len(changes)} projects moved to new topics (log: {log}).')
+        rebuild_project_graphs(projects_tbl, PROJECT_GRAPH_DIR)
+        print('project graph successfully updated!')
+        write_treemap(projects_tbl, load_topic2hier(TOPIC_HIER_PATH), TREEMAP_PATH)
+        print(f'treemap successfully updated ({TREEMAP_PATH})!')
+    sys.exit(0)
 
 
 def count_deliverables(project_ids):
@@ -179,41 +206,34 @@ if UPDATE_PROJECTS:
 
     specter_embs = precomputed_embeddings(SPECTER_EMBS, 'Specter2') if SPECTER_EMBS else None
 
-    # embedding per ricerca semantica
+    # embedding per ricerca semantica: quelli precomputati si controllano subito, gli altri
+    # si calcolano dopo il topic modelling (che può fermarsi in attesa del foglio)
     bge_dim = projects_tbl.schema.field('vector').type.list_size
+    bge_embs = None
     if BGE_EMBS:
         bge_embs = precomputed_embeddings(BGE_EMBS, 'bge-m3')
         if bge_embs.shape[1] != bge_dim:
             print(f"bge-m3 embeddings in {BGE_EMBS} have dimension {bge_embs.shape[1]}, "
                   f"projects_uncase.vector has {bge_dim}.")
             sys.exit(1)
-    else:
-        bge_embs = extract_bgem3(new_proj_df)
 
     # 1.2: topic modelling
-    # i progetti sotto soglia finiscono nel report dei possibili topic nuovi e vengono
-    # revisionati prima di scrivere qualsiasi cosa nei db (vedi topic_review_cli.py).
-    # Un topic accettato può prendere anche progetti già nel db (con una penalità)
-    existing = None
-    if TOPIC_REVIEW != 'none':
-        existing = load_existing(projects_tbl, SPECTER_STORE_PATH, exclude_ids=new_proj_df['projectID'])
-        if existing is None:
-            print(f"WARNING: {SPECTER_STORE_PATH} not found: projects already in the db "
-                  "will not be reassigned to new topics.")
+    # i progetti sotto soglia hanno un topic provvisorio (il topic più vicino al loro cluster,
+    # Unlabelled se isolati) e finiscono nel foglio Excel dei possibili topic nuovi (vedi
+    # topic_review_sheet.py); quando è compilato lo si applica con --review
     try:
         assignment = assign_topics(new_proj_df, specter_embs,
                                    similarity_threshold=TOPIC_SIM_THRESHOLD,
                                    min_cluster_size=TOPIC_MIN_CLUSTER_SIZE,
-                                   report_path=TOPIC_REPORT_PATH,
                                    review=TOPIC_REVIEW,
-                                   decisions_path=TOPIC_DECISIONS_PATH,
-                                   reviewed_bonus=TOPIC_REVIEWED_BONUS,
-                                   existing=existing,
-                                   existing_bonus=TOPIC_EXISTING_BONUS)
+                                   sheet_path=TOPIC_SHEET_PATH,
+                                   reviewed_bonus=TOPIC_REVIEWED_BONUS)
     except (ReviewAborted, KeyboardInterrupt) as e:
-        print(f"\n{e or 'Review interrupted'}. No database was modified; "
-              f"decisions taken so far are in {TOPIC_DECISIONS_PATH}.")
+        print(f"\n{e or 'Interrupted'}\nNo database was modified.")
         sys.exit(1)
+
+    if bge_embs is None:
+        bge_embs = extract_bgem3(new_proj_df)
 
     new_proj_df = new_proj_df.merge(assignment.topics, on='projectID', how='left')
 
@@ -228,19 +248,10 @@ if UPDATE_PROJECTS:
     projects_tbl.add(new_proj_df)
     print('projects_uncase successfully updated!')
 
-    # 1.5 embedding Specter2 dei progetti nuovi nell'archivio, per le riassegnazioni future
+    # 1.5 embedding Specter2 dei progetti nuovi nell'archivio: servono ad applicare il foglio
+    # di revisione e a riassegnare progetti già nel db
     n_store = update_store(SPECTER_STORE_PATH, new_proj_df['projectID'], assignment.embeddings)
     print(f'Specter2 embeddings stored ({n_store} projects in {SPECTER_STORE_PATH}).')
-
-    # 1.6 progetti già nel db passati ai topic nuovi (projects_uncase e participants)
-    if not assignment.moves.empty:
-        log = write_moves(db, assignment.moves, BACKUP_DIR)
-        projects_tbl = db.open_table("projects_uncase")   # handle aggiornato dopo la scrittura
-        print(f'{len(assignment.moves)} projects already in the db moved to new topics (log: {log}).')
-        if not UPDATE_PARTICIPANTS:
-            # altrimenti i grafi vengono rigenerati dallo step 2
-            rebuild_project_graphs(projects_tbl, PROJECT_GRAPH_DIR)
-            print('project graph successfully updated!')
 
 
 #* STEP 2: AGGIORNAMENTO PARTICIPANTS_TBL

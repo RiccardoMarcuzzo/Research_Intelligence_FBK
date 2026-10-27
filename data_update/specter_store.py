@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Archivio degli embedding Specter2 di tutti i progetti del db (data/specter2.parquet,
 # colonne projectID e vector). Serve a riassegnare i progetti già nel db quando la
-# revisione crea un topic nuovo (vedi reassign_existing.py). update_db.py vi aggiunge
+# revisione crea un topic nuovo (vedi topic_review.py). update_db.py vi aggiunge
 # gli embedding dei progetti nuovi a ogni aggiornamento.
 # ------------------------------------------------------------------------------
 
