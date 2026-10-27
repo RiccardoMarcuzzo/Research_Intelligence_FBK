@@ -1,10 +1,18 @@
 # Review dei topic
 
-> **Scopo:** spiega come si assegnano i topic ai progetti nuovi, come si svolge la revisione interattiva dei possibili topic nuovi, come si spostano i progetti già presenti nel db sui topic creati e perché il sistema funziona così. La prima parte è il runbook (cosa fare), la seconda la teoria (perché).
+> **Scopo:** spiega come si assegnano i topic ai progetti nuovi, come si compila il foglio Excel con cui una persona rivede i possibili topic nuovi, come i progetti già presenti nel db passano ai topic creati e perché il sistema funziona così. La prima parte è il runbook (cosa fare), la seconda la teoria (perché).
 
-La review dei topic è il passo di `update_db.py` (step 1) in cui una persona decide cosa fare dei progetti nuovi che **non assomigliano abbastanza a nessun topic esistente**. È l'unica parte dell'aggiornamento che richiede un giudizio umano. Il resto della procedura è in [Eseguire l'aggiornamento dei dati](eseguire-update-db.md).
+La review dei topic è la parte di `update_db.py` (step 1) in cui una persona decide cosa fare dei progetti nuovi che **non assomigliano abbastanza a nessun topic esistente**. È l'unica parte dell'aggiornamento che richiede un giudizio umano. Il resto della procedura è in [Eseguire l'aggiornamento dei dati](eseguire-update-db.md).
 
-Il codice è in `data_update/`: `extract_topic.py` (assegnazione e report), `topic_review.py` (logica) e `topic_review_cli.py` (schermate a terminale). `reassign_existing.py` sposta progetti già presenti.
+**Chi fa la review non ha bisogno di un terminale, e l'aggiornamento non aspetta la review.** Il processo è in tre momenti:
+
+1. chi esegue l'aggiornamento lancia `python update_db.py` come sempre: **vengono eseguiti tutti gli step**. I progetti nuovi entrano nel db con un **topic provvisorio** e viene scritto un foglio Excel con la data nel nome (1.2);
+2. il revisore compila il foglio (1.3-1.6), senza toccare il codice;
+3. chi esegue l'aggiornamento lancia `python update_db.py --review FILE` e i topic decisi vengono applicati ai progetti già presenti nel db (1.7).
+
+Fino al terzo momento la piattaforma è in uno stato consistente, solo con topic provvisori per i progetti candidati.
+
+Il codice è in `data_update/`: `extract_topic.py` (assegnazione, topic provvisori, applicazione del foglio), `topic_review.py` (logica: gerarchia, modello, spostamenti) e `topic_review_sheet.py` (scrittura e lettura del foglio).
 
 ---
 
@@ -12,203 +20,162 @@ Il codice è in `data_update/`: `extract_topic.py` (assegnazione e report), `top
 
 ## 1.1 Prima di cominciare
 
-- **Un terminale interattivo.** La review parte solo se `stdin` è un terminale. In uno script, con l'output rediretto o in un job automatico il sistema usa la modalità senza review (ogni progetto tiene il topic più vicino, vedi 1.10).
 - **Gli embedding dei progetti nuovi sono pronti** (Specter2 e bge-m3, vedi P4 in [Eseguire l'aggiornamento dei dati](eseguire-update-db.md)).
-- **`data/specter2.parquet` esiste.** Senza, i progetti già nel db non possono essere spostati sui topic nuovi (compare un `WARNING`).
-- **Il backup di `data/` è stato fatto** (vedi P6). La review modifica il modello dei topic e `topic2hier.json`, anche se prima salva una copia.
-- **Tempo:** di solito non più di mezz'ora, ma dipende dal numero di candidati.
-- Il file in cui si salvano le decisioni è `decisions_file` in `settings.config` (default `new_data/topic_decisions.json`).
+- **`data/specter2.parquet` esiste.** `--review` ne ha bisogno per leggere gli embedding dei progetti del foglio e per spostare i progetti vecchi sui topic nuovi.
+- **Il backup di `data/` è stato fatto** (vedi P6). Applicare il foglio modifica il modello dei topic e `topic2hier.json`, anche se prima ne salva una copia.
 
-## 1.2 Avvio
-
-La review fa parte dello step 1, quindi si avvia con:
+## 1.2 Il lancio normale: topic provvisori e foglio
 
 ```bash
 python update_db.py              # tutti gli step
-python update_db.py --projects   # solo progetti (e quindi review)
+python update_db.py --projects   # solo progetti (e quindi topic e foglio)
 ```
 
-Prima della review il programma assegna a ogni progetto nuovo il topic esistente più simile e stampa:
+Il programma assegna a ogni progetto nuovo il topic esistente più simile e stampa:
 
 ```
 N new projects assigned to existing topics.
 M have similarity < 0.92: K candidate new topics, I isolated projects.
-Review the candidates in new_data/topic_candidates.csv
+Review sheet: K clusters, I isolated projects.
+Fill in new_data/topic_review_2026-10-26.xlsx, then apply it with: python update_db.py --review new_data/topic_review_2026-10-26.xlsx
 ```
+
+Poi **prosegue con tutti gli altri passaggi**. I progetti candidati hanno un **topic provvisorio**:
+
+| Progetto | Topic provvisorio |
+|---|---|
+| Non candidato (similarità ≥ 0,92) | Il topic esistente più simile, come sempre |
+| Candidato in un cluster | **Lo stesso topic per tutto il cluster**: quello più simile al centro del cluster |
+| Candidato isolato | `Unlabelled` (senza alias nel modello) |
+| Candidato già assegnato in automatico a un topic creato da una review precedente | Quel topic (`auto_assigned`): resta dov'è |
+
+Il **modello dei topic e `topic2hier.json` non cambiano** in questo lancio: li modifica soltanto `--review`.
+
+Il file ha il nome di `review_file` (default `new_data/topic_review.xlsx`) con la **data del lancio** prima dell'estensione. Un secondo lancio nello stesso giorno **sovrascrive** il foglio del giorno; in un giorno diverso i fogli **convivono**, ciascuno col suo gruppo di progetti. Se il foglio è già stato compilato conviene rinominarlo prima di rilanciare.
 
 - **Candidati**: i progetti la cui similarità con il topic più vicino è sotto la soglia (0,92).
 - Il programma li raggruppa in **cluster** (K), ciascuno un possibile topic nuovo; quelli che non finiscono in nessun cluster sono **isolati** (I).
-- Se ci sono meno di circa 12 candidati, non viene fatto nessun clustering e sono tutti isolati.
-- Se non ci sono candidati stampa `No candidate new topics to review.` e prosegue senza review.
+- Se ci sono meno di circa 12 candidati, non viene fatto nessun clustering e sono tutti isolati (quindi `Unlabelled` in via provvisoria).
+- Se non ci sono candidati stampa `No candidate new topics to review.` e non scrive nessun foglio.
 
-Il report dei candidati è un CSV (`candidates_report_file`, default `new_data/topic_candidates.csv`) con una riga per candidato:
+## 1.3 Il foglio
 
-| Colonna | Significato |
+| Foglio | Contenuto |
 |---|---|
-| `cluster`, `cluster_size` | Cluster di appartenenza (`-1` = isolato) e dimensione |
-| `cluster_keywords` | Parole chiave del cluster |
-| `projectID`, `title` | Il progetto |
-| `similarity` | Similarità con il miglior topic originale |
-| `nearest_topic` | Il topic più vicino |
-| `auto_assigned` | `True` se il progetto è stato già assegnato automaticamente a un topic creato in una review precedente |
+| **Istruzioni** | Come si compila. |
+| **Indice** | Un cluster per riga (con collegamento al foglio), numero di progetti, parole chiave, topic esistente più simile e il **percorso già inserito** (si aggiorna da solo). |
+| **Gerarchia** | I topic esistenti, uno per riga, con i quattro livelli. Serve a scegliere dove inserire. |
+| **C01, C02, …** | Un foglio per cluster, dal più grande al più piccolo. |
+| **Isolati** | I progetti che non stanno in nessun cluster. |
 
-Il file serve per consultazione (si può aprire con un foglio di calcolo): le decisioni si prendono nelle schermate a terminale.
+Ogni foglio cluster ha in cima le parole chiave, i **5 topic esistenti più simili** (con la similarità), le **celle gialle B4:E4** per il percorso e una cella per le note. Sotto c'è la tabella dei progetti, **ordinata dal più al meno rilevante** (il più vicino al centro del cluster per primo), con titolo, primi 600 caratteri dell'*objective*, **topic provvisorio** e la colonna **Altro topic**.
 
-## 1.3 Come si svolge la sessione
+> **Non modificare** la colonna *projectID* né la colonna *Topic provvisorio*: servono a controllare, quando il foglio viene applicato, che i progetti siano ancora quelli.
 
-La sessione interattiva segue sempre quest'ordine:
+## 1.4 Compilare un cluster
 
-1. **Cluster**, uno alla volta, dal più grande al più piccolo.
-2. **Progetti isolati.**
-3. **Progetti già nel db**: solo per i topic che hai accettato come nuovi.
-4. **Riepilogo** e conferma finale.
+Si scrive il **percorso** del topic nelle celle gialle B4:E4: livello 1 (macro-area) in B4, poi uno per cella, fino a quattro. La cella B4 ha un menu con le macro-aree esistenti, ma si può scrivere anche un nome nuovo.
 
-Ogni risposta viene salvata subito nel file delle decisioni. Un progetto non viene mai mostrato due volte.
-
-## 1.4 Un cluster
-
-La schermata mostra:
-
-- il numero di progetti e la **similarità media** con il topic più vicino;
-- le **parole chiave** del cluster;
-- i **nomi suggeriti** (bigrammi frequenti nei titoli e parole chiave);
-- i **5 progetti più rappresentativi** (titolo, similarità e topic più vicino);
-- i **5 topic esistenti più simili** al cluster, con la similarità (una ★ segnala i topic creati in una review precedente).
-
-Poi chiede cosa fare:
-
-| Scelta | Che cosa fa |
+| Cosa si scrive | Che cosa succede |
 |---|---|
-| **Accetta come nuovo topic** | Crea un topic nuovo con i progetti del cluster (vedi 1.5). |
-| **Rimappa su un topic esistente** | I progetti vanno a un topic già presente; il modello e la gerarchia non cambiano. Si sceglie tra i più simili o con la ricerca per nome. |
-| **Unlabelled** | I progetti diventano `Unlabelled`. Il gruppo entra nel modello come *alias* con percorso vuoto: i progetti simili dei prossimi aggiornamenti verranno scartati in automatico. |
-| **Tieni a ogni progetto il topic più vicino** | Nessun cambiamento: ciascuno resta dov'è. |
-| **Escludi alcuni progetti dal cluster** | Si spuntano i progetti che non c'entrano: tengono il topic più vicino, il resto del cluster va avanti. |
-| **Mostra tutti i progetti** | Elenca titolo e obiettivo (primi 400 caratteri) di ogni progetto. |
-| **Decidi dopo** | Rimanda il cluster in fondo alla coda. |
+| **Niente** | Ogni progetto del cluster resta al topic provvisorio. È il comportamento se si salta un cluster. |
+| **Un percorso già presente nel foglio Gerarchia** | I progetti vanno a quel topic esistente; modello e gerarchia non cambiano. |
+| **Un percorso nuovo** | Nasce un **topic nuovo** con quel percorso. Può stare sotto categorie esistenti o crearne di nuove. |
+| **`Unlabelled`** nel livello 1 | I progetti diventano `Unlabelled`. Il gruppo entra nel modello come *alias* con percorso vuoto: i progetti simili dei prossimi aggiornamenti verranno scartati in automatico (2.6). |
 
-Se il topic più simile è stato creato in una review precedente, il programma propone di rimapparlo lì, perché di solito il cluster tratta lo stesso tema.
+Si può usare **qualunque** percorso, esistente o nuovo. I nomi già esistenti vengono riconosciuti anche con maiuscole diverse (e il programma avvisa che li ha corretti).
+
+Un progetto che non c'entra con il percorso del cluster si tratta nella colonna **Altro topic** (E), che ha un menu con tutti i **topic esistenti** (foglie): si sceglie dal menu, oppure si digita e il menu filtra mentre si scrive. Il progetto va a quel topic, qualunque sia il percorso del cluster. Scrivendo una **x** (o cancellando la riga) il progetto resta invece al topic provvisorio. Il testo digitato deve essere esattamente il nome di un topic esistente (maiuscole a parte) oppure `x`: altrimenti è un errore. Il menu riguarda solo i topic esistenti; per un topic nuovo si usa il percorso del cluster o il foglio Isolati.
+
+Tutti i progetti, di **qualunque foglio**, con lo stesso percorso nuovo formano **un solo topic**. Quindi due cluster che trattano lo stesso tema si uniscono scrivendo lo stesso percorso.
 
 > **Criteri di decisione: da completare.** Quando conviene accettare, rimappare o lasciare Unlabelled; con quali segnali (dimensione, titoli, vicinanza a un topic esistente) si giudica.
 
-## 1.5 Accettare un nuovo topic
+## 1.5 Regole del percorso
 
-1. **Nome.** Il programma propone il primo nome suggerito. Si può scrivere un altro nome; un invio a vuoto torna indietro. Il nome non può essere `Unlabelled`. Controlli:
-   - se **esiste già un topic con lo stesso nome**, propone di rimapparlo lì (o di scegliere un altro nome);
-   - se il nome è già **una categoria** (un nodo con figli), va scelto un altro nome;
-   - se è **simile a nomi già presenti**, mostra quali e chiede conferma.
-2. **Posizione nella gerarchia.** Si naviga dalla radice: si sceglie una macro-area, poi eventualmente un'area e una sotto-area, e infine **Inserisci qui**. Si può creare una **nuova** macro-area, area o sotto-area scrivendone il nome. Il programma propone di partire accanto al topic più simile. Alla fine chiede conferma.
-3. **Regole del percorso** (controllate dal programma):
-   - il percorso ha da 2 a 4 nodi (macro-area, fino a due livelli intermedi, topic);
-   - un topic è sempre una **foglia**: non può avere figli;
-   - ogni nodo ha **un solo padre** e nello stesso percorso un nome non si ripete;
-   - un percorso identico a uno esistente non è ammesso (si usa la rimappatura).
+Il programma le controlla alla lettura del foglio:
 
-I topic accettati sono utilizzabili subito come destinazione di una rimappatura nella stessa sessione.
+- il percorso ha da 2 a 4 livelli (macro-area, fino a due livelli intermedi, topic) e si riempie dal primo, **senza buchi**;
+- un topic è sempre una **foglia**: non può avere figli, e un nome già usato come categoria non può diventare un topic;
+- ogni nodo ha **un solo padre** e nello stesso percorso un nome non si ripete;
+- `Unlabelled` va da solo nel livello 1;
+- un nome nuovo **simile** a uno esistente (per esempio `Climate Modeling` e `Climate Modelling`) non è un errore ma genera un avviso: controllare che non sia un refuso.
 
-## 1.6 Progetti isolati
+## 1.6 Il foglio Isolati
 
-Dopo i cluster il programma chiede cosa fare dei progetti isolati:
+Gli **isolati** sono progetti troppo poco simili a ogni topic esistente (sotto la soglia) e troppo diversi tra loro per formare un cluster. Per ora sono `Unlabelled`. L'intestazione del foglio lo ricorda: se un progetto non merita un topic proprio basta lasciarlo com'è.
 
-- **Tieni a tutti il topic più vicino** (di solito la scelta ovvia), oppure
-- **Rivedili uno per uno**: per ciascuno si sceglie tra tenere il topic più vicino, rimappare su un altro topic o `Unlabelled`. Per un progetto isolato `Unlabelled` vale solo per quel progetto, senza creare un alias nel modello.
+Qui ogni progetto ha le **proprie** celle per il percorso (colonne E-H, stesse regole dei cluster). Lasciarle vuote significa che il progetto resta `Unlabelled`. Per dare un topic a un progetto si scrive un percorso; più isolati con lo stesso percorso nuovo formano un topic. Con `Unlabelled` su un isolato il progetto resta `Unlabelled` e basta: **non** si crea un alias nel modello, perché il centroide di progetti tra loro eterogenei assorbirebbe troppi progetti dei prossimi aggiornamenti.
 
-## 1.7 Progetti già nel db
+## 1.7 Applicare il foglio: `--review`
 
-Per ogni topic che hai **accettato** come nuovo, il programma calcola quanti progetti **già presenti nel db** passerebbero lì (tra quelli sotto soglia) e mostra:
-
-- il numero di progetti che si sposterebbero e il **bonus** usato;
-- una tabella dei **topic di provenienza** (i primi 8);
-- **10 esempi**, dal più sicuro al più incerto, con il margine (la differenza di similarità con il miglior topic originale).
-
-Poi si sceglie:
-
-| Scelta | Effetto |
-|---|---|
-| **Applica (N progetti)** | Salva il bonus e sposta quei progetti. |
-| **Cambia il bonus…** | Si inserisce un altro valore tra −0,1 e +0,1 e si ricalcola. |
-| **Mostra tutti i progetti** | Elenco completo (compare se sono più di 10). |
-| **Non toccare i progetti già nel db** | Il topic nuovo prende solo progetti nuovi. |
-
-**Il bonus** regola quanto è permissivo lo spostamento. Il valore proposto è `reviewed_topic_bonus_existing` (−0,005): una **penalità**, perché i progetti già nel db erano stati classificati in passato e conviene muoverne pochi. Più il bonus è alto, più progetti si spostano e più alto è il rischio di spostare progetti fuori tema; per i progetti nuovi il bonus è +0,02 (vedi la teoria). Solo i topic **accettati** prendono progetti già nel db, mai gli alias `Unlabelled`.
-
-La risposta si salva come `existing_bonus` nella decisione di accettazione: `null` (o l'assenza del campo) significa "non toccare".
-
-## 1.8 Riepilogo e conferma
-
-Il programma mostra una tabella con un'azione per riga (nuovo topic, rimappa, `Unlabelled`, topic più vicino), il numero di progetti e, per i nuovi topic, quanti progetti già nel db si sposterebbero. Poi chiede **"Applicare queste decisioni?"**.
-
-- **Sì:**
-  - se sono stati accettati topic o alias, il **modello dei topic** e `topic2hier.json` vengono aggiornati (dopo averne copiato la versione precedente in `data/backups/`);
-  - i progetti nuovi vengono scritti con i topic decisi (step 1.4 di `update_db.py`);
-  - i progetti già presenti vengono spostati (step 1.6): vengono riscritti soltanto `topic_name` e `topic_name_hierarchy` dei progetti spostati, in `projects_uncase` e in `participants`, con un log in `data/backups/reassign_<data-ora>.json`;
-  - `specter2.parquet`, i grafi dei progetti e la treemap vengono aggiornati.
-- **No** (oppure Ctrl-C): non viene scritto nulla. Le decisioni restano nel file e si può riprendere.
-
-## 1.9 Interrompere e riprendere
-
-- Le decisioni vengono salvate nel file dopo **ogni risposta**. Se la sessione si interrompe (Ctrl-C, chiusura del terminale), nulla è stato scritto nel db.
-- Rilanciando `update_db.py` per lo **stesso batch** di progetti, il programma trova il file e chiede: *"Trovate N decisioni salvate per questo batch. Riprendere da lì?"*. Rispondendo sì riparte dal punto in cui eri.
-- Il file è legato al batch tramite un identificatore calcolato sugli id dei progetti nuovi. Se il batch è diverso, il file viene **sovrascritto** all'inizio della nuova sessione: se contiene decisioni che vuoi conservare, copialo prima.
-
-## 1.10 Senza review e riapplicando decisioni
-
-| Modo | Comando | Effetto |
-|---|---|---|
-| Senza review | `python update_db.py --no-review` | Ogni progetto tiene il topic esistente più vicino. Nessun topic nuovo. Il comportamento è lo stesso se non c'è un terminale. |
-| Riapplicare decisioni | `python update_db.py --decisions FILE` | Applica le decisioni di quel file senza domande. Se il file è di un altro batch c'è un avviso e le decisioni valgono solo per i progetti che combaciano: non usare il file di un aggiornamento diverso. |
-
-## 1.11 Spostare progetti già presenti: `reassign_existing.py`
-
-Nel flusso normale lo spostamento dei progetti già presenti avviene dentro la review (1.7). `reassign_existing.py` serve per **topic accettati in revisioni passate**, per esempio prima che esistesse `data/specter2.parquet`. Riapplica la stessa schermata e la stessa regola a topic che esistono già.
+Salvare il file (formato `.xlsx`) e lanciare:
 
 ```bash
-python reassign_existing.py --topics 203 204 --dry-run   # mostra soltanto cosa cambierebbe
-python reassign_existing.py --topics 203                 # interattivo: chiede cosa fare per ogni topic
-python reassign_existing.py --topics 203 --bonus -0.005 --yes   # applica senza chiedere
+python update_db.py --review new_data/topic_review_2026-10-26.xlsx
 ```
 
-| Opzione | Significato |
-|---|---|
-| `--topics ID [ID ...]` | Id dei topic (obbligatorio) |
-| `--bonus X` | Bonus; se manca, quello di `settings.config` (`reviewed_topic_bonus_existing`) |
-| `--dry-run` | Solo anteprima |
-| `--yes` | Applica con `--bonus` senza domande |
-| `--config FILE` | Altro `settings.config` |
+`--review` **applica il foglio e termina**: non legge l'export, non aggiunge progetti e non si combina con i flag degli step né con `--no-review`. Funziona sui progetti che sono **già nel db** (quelli del foglio).
 
-Note:
+Il programma **legge tutto il foglio e raccoglie tutti gli errori** prima di fare qualsiasi cosa, indicando foglio e cella:
 
-- Funziona solo per topic creati da una review (elencati in `data/old_topic_model/reviewed_topics.json`). I topic originali non si riassegnano; un alias `Unlabelled` non prende progetti.
-- Senza terminale richiede `--yes` o `--dry-run`.
-- Alla fine rigenera i grafi dei progetti e la treemap e stampa il percorso del log.
-- Un'interruzione con Ctrl-C non scrive nulla.
+```
+new_data/topic_review_2026-10-26.xlsx contains 2 error(s):
+  - C01: percorso Engineering & Technology > Arms: ...
+  - C02!A20: projectID 999 non presente nel db
+```
 
-## 1.12 Cosa viene scritto e dove restano i backup
+Controlla anche che ogni progetto abbia **ancora il topic provvisorio** scritto nel foglio. Se non è così, il foglio è già stato applicato (applicarlo due volte non è possibile) oppure il progetto è stato spostato da un'altra review; per lasciarlo com'è si cancella la sua riga.
+
+Se ci sono errori, esce con `No database was modified.` e si corregge il foglio. Altrimenti applica:
+
+1. i **topic nuovi** e gli alias entrano nel modello e in `topic2hier.json` (dopo averne copiato la versione precedente in `data/backups/`);
+2. i progetti del foglio il cui topic cambia vengono riscritti (`topic_name` e `topic_name_hierarchy`, in `projects_uncase` e in `participants`);
+3. i **progetti già presenti nel db** che somigliano a un topic nuovo passano a quel topic (1.8);
+4. i grafi dei progetti e la treemap vengono rigenerati.
+
+Tutte le riscritture di topic sono in un unico log, `data/backups/reassign_<data-ora>.json`, con i topic di prima e la versione delle tabelle prima della modifica.
+
+## 1.8 Progetti già nel db
+
+Ogni **topic nuovo** (non gli alias `Unlabelled`, non i topic esistenti) prende anche i progetti **già presenti nel db** che gli somigliano, senza che il revisore debba decidere. La regola è quella dei progetti nuovi, ma con una penalità fissa, `reviewed_topic_bonus_existing` (−0,005 di default): concorrono solo i progetti sotto soglia e vince il topic nuovo se la sua similarità, più il bonus, raggiunge quella del miglior topic originale. I progetti già classificati in passato si spostano quindi poco (vedi 2.7). Vengono riscritti soltanto `topic_name` e `topic_name_hierarchy` dei progetti spostati.
+
+## 1.9 Senza review
+
+```bash
+python update_db.py --no-review
+```
+
+Ogni progetto tiene il topic esistente più vicino. Nessun foglio, nessun topic provvisorio nei cluster. `--review` e `--no-review` non si usano insieme.
+
+## 1.10 Cosa viene scritto e dove restano i backup
 
 | Cosa | Dove | Quando |
 |---|---|---|
-| Nuovi topic nel modello | `data/old_topic_model/` | Se la review accetta topic o alias |
+| Foglio da compilare | `review_file` con la data (es. `new_data/topic_review_2026-10-26.xlsx`) | Al lancio normale, se ci sono candidati |
+| Nuovi topic nel modello | `data/old_topic_model/` | Con `--review`, se il foglio crea topic o alias |
 | Id dei topic creati da una review | `data/old_topic_model/reviewed_topics.json` | Stesso momento |
 | Gerarchia | `data/topic2hier.json` | Stesso momento |
 | Backup di modello e gerarchia | `data/backups/old_topic_model_<data-ora>/` e `topic2hier_<data-ora>.json` | Prima di ogni modifica del modello |
-| Log degli spostamenti | `data/backups/reassign_<data-ora>.json` | Se vengono spostati progetti già presenti; contiene i topic di prima e la versione delle tabelle prima della modifica |
-| Decisioni | `decisions_file` (default `new_data/topic_decisions.json`) | Dopo ogni risposta |
-| Report dei candidati | `candidates_report_file` | Prima della review |
+| Log delle riscritture | `data/backups/reassign_<data-ora>.json` | Con `--review`; contiene i topic di prima e la versione delle tabelle prima della modifica |
 
 > **Ripristino: da completare.** Come tornare indietro (modello e gerarchia dalle copie in `data/backups/`, tabelle dalla versione indicata nel log) andrà descritto nella sezione sulle verifiche e il rollback.
 
-Un dettaglio utile dal codice: il modello e la gerarchia vengono salvati **prima** che i progetti siano scritti nel db. Se `update_db.py` si interrompe tra i due momenti, il modello contiene già i topic nuovi mentre i progetti non sono ancora stati aggiunti; rilanciando, i progetti simili sono assegnati in automatico ai topic creati (`auto_assigned`).
+Un dettaglio utile dal codice: con `--review` il modello e la gerarchia vengono salvati **prima** che i progetti siano riscritti nel db. Se il programma si interrompe tra i due momenti, il modello contiene già i topic nuovi mentre i progetti hanno ancora i topic provvisori. Rilanciare `--review` con lo stesso foglio non è sicuro: un percorso nuovo è ormai un percorso esistente, quindi i progetti del foglio vengono assegnati a quei topic ma i progetti vecchi non si spostano e gli alias `Unlabelled` dei cluster verrebbero creati una seconda volta. Per un risultato pulito si ripristinano modello e gerarchia dal backup (`data/backups/`) e si rilancia.
 
-## 1.13 Problemi comuni
+## 1.11 Problemi comuni
 
 | Sintomo | Causa e rimedio |
 |---|---|
-| La review non parte e ogni progetto prende il topic più vicino | Il terminale non è interattivo, oppure è stato passato `--no-review`. |
-| `WARNING: ... not found: projects already in the db will not be reassigned` | Manca `data/specter2.parquet`: si può ricostruire con `compute_embeddings.py --model specter2 --source db` (vedi la parte 2). |
+| Il lancio normale non si ferma e non chiede nulla | È il comportamento voluto: i progetti entrano con topic provvisori. Il foglio si applica dopo, con `--review`. |
+| `contains N error(s)` | Il foglio ha errori: il messaggio indica foglio e cella. Nulla è stato scritto. |
+| `ha ora il topic "X" nel db, non "Y": il foglio è già stato applicato o il progetto è stato spostato` | Il foglio è già stato applicato, oppure il progetto è cambiato dopo (o è stata modificata la colonna *Topic provvisorio*). Cancellare la riga di quel progetto per lasciarlo com'è. |
+| `projectID ... non presente nel db` | Un projectID modificato a mano, oppure i progetti del foglio non sono stati scritti nel db (lancio interrotto). |
+| `il progetto N compare anche in ...` | Lo stesso progetto è in due fogli. |
+| `impossibile leggere ...` | Il file non è un `.xlsx` valido (per esempio salvato come CSV). |
+| `Specter2 embeddings: ...` con `--review` | Mancano `data/specter2.parquet` o gli embedding di alcuni progetti del foglio: si può ricostruire con `compute_embeddings.py --model specter2 --source db` (vedi la parte 2). |
+| `WARNING: ... not found: projects already in the db will not be reassigned` | Manca `data/specter2.parquet`: i progetti vecchi non si spostano sui topic nuovi. |
 | `WARNING: N projects in the db have no Specter2 embedding` | Alcuni progetti nel db non hanno l'embedding nell'archivio e non possono essere spostati. |
-| `... was written for a different batch` | Si sta usando un file di decisioni di un altro aggiornamento. |
-| `Review cancelled: nothing was written` | Hai risposto no al riepilogo finale: le decisioni sono salvate, rilancia e riprendi. |
-| Errore sul percorso di un nuovo topic (`un topic deve avere da 2 a 4 livelli`, `ogni nodo ha un solo padre`, ...) | Il percorso viola una regola della gerarchia (1.5). |
 
 ---
 
@@ -241,11 +208,11 @@ BERTopic ha una funzione per unire modelli (`merge_models`), ma non viene usata.
 
 ## 2.6 Alias `Unlabelled`
 
-Scegliere `Unlabelled` su un cluster aggiunge un topic al modello con percorso vuoto: serve a "assorbire" i progetti simili nei prossimi aggiornamenti, perché finiscano `Unlabelled` in automatico invece di tornare in review. Per i progetti isolati rivisti uno per uno, `Unlabelled` non crea alias.
+Scrivere `Unlabelled` su un **cluster** aggiunge un topic al modello con percorso vuoto: serve a "assorbire" i progetti simili nei prossimi aggiornamenti, perché finiscano `Unlabelled` in automatico invece di tornare in review. Per i progetti **isolati** `Unlabelled` vale solo per quel progetto, senza alias.
 
 ## 2.7 Progetti già nel db: perché una penalità
 
-Un topic accettato può prendere anche progetti già classificati. Con lo stesso criterio dei progetti nuovi ma un bonus più severo, `reviewed_topic_bonus_existing` (**−0,005**, cioè una penalità). 
+Un topic nuovo prende anche progetti già classificati, sempre. Con lo stesso criterio dei progetti nuovi ma un bonus più severo, `reviewed_topic_bonus_existing` (**−0,005**, cioè una penalità). Un topic ampio come "Generative AI" (203) prenderebbe 760 progetti vecchi con +0,02 (molti fuori tema), 168 con 0 e circa 100 con −0,005. Il revisore non sceglie il bonus: lo fissa la configurazione. 
 
 I topic creati da review precedenti concorrono con lo stesso bonus: se uno di loro vince su un progetto già nel db, il progetto resta dov'è. Gli spostamenti riscrivono **solo** `topic_name` e `topic_name_hierarchy` dei progetti spostati; gli altri progetti non vengono mai riscritti.
 
@@ -264,12 +231,15 @@ I topic creati da review precedenti concorrono con lo stesso bonus: se uno di lo
 |---|---|---|
 | `similarity_threshold` | 0.92 | Sotto questa similarità un progetto è candidato a un topic nuovo |
 | `min_cluster_size` | 5 | Dimensione minima di un cluster di candidati |
-| `candidates_report_file` | `new_data/topic_candidates.csv` | Report dei candidati |
-| `decisions_file` | `new_data/topic_decisions.json` | Decisioni salvate |
+| `review_file` | `new_data/topic_review.xlsx` | Foglio Excel dei possibili topic nuovi; al nome viene aggiunta la data del lancio |
 | `reviewed_topic_bonus` | 0.02 | Bonus dei topic creati da una review, per i progetti nuovi |
-| `reviewed_topic_bonus_existing` | −0.005 | Bonus (penalità) per i progetti già nel db |
+| `reviewed_topic_bonus_existing` | −0.005 | Bonus (penalità) con cui i topic nuovi prendono progetti già nel db |
 
-## 2.10 Archivio degli embedding Specter2
+## 2.10 Topic provvisori
+
+Il lancio normale non aspetta la review perché i progetti nuovi devono essere nella piattaforma comunque. Finché il foglio non è applicato, un candidato ha un topic che sia **coerente col suo gruppo**: tutto il cluster va al topic più vicino al suo centroide (la stessa regola di `assign_existing_topics`, con i topic delle review precedenti che concorrono col bonus), perché il revisore decide per cluster; gli isolati sono `Unlabelled`, perché per definizione non hanno un topic vicino. I candidati già assegnati in automatico a un topic di una review precedente restano lì: sono già stati riconosciuti come simili a un topic rivisto. Il foglio riporta il topic provvisorio effettivo, e `--review` lo usa come controllo: un progetto il cui topic nel db è cambiato nel frattempo non viene sovrascritto.
+
+## 2.11 Archivio degli embedding Specter2
 
 `data/specter2.parquet` (colonne `projectID` int32 e `vector` fixed_size_list<float>[768]) contiene l'embedding Specter2 di **ogni** progetto del db. Serve solo ai topic: permette di valutare quali progetti già presenti passerebbero a un topic nuovo. `update_db.py` vi aggiunge i progetti nuovi a ogni aggiornamento (step 1.5); se il file manca, viene creato con i soli progetti nuovi. Gli embedding bge-m3 non hanno un archivio separato: sono `projects_uncase.vector`.
 

@@ -38,9 +38,8 @@ hdbscan==0.8.44
 nltk==3.10.3
 tqdm==4.70.1
 
-# revisione dei topic nuovi a terminale
-questionary==2.1.1
-rich==15.0.0
+# foglio Excel per la revisione dei topic nuovi
+openpyxl==3.1.5
 
 # estrazione dei deliverables (legacy_extract_deliverables.py)
 openai==3.31.0

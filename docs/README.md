@@ -41,7 +41,7 @@ Parti della documentazione o del progetto che non sono ancora definite. Quando u
 | # | Cosa manca | Dove compare |
 |---|---|---|
 | 1 | **Deploy sul nuovo server**: dove gira l'app, come si avvia (servizio, container...), reverse proxy, valore di `--path` | [Avvio della dashboard](02-dashboard/avvio-dashboard.md#deploy) |
-| 2 | **Criteri di decisione della review dei topic**: quando accettare, rimappare o lasciare `Unlabelled`, e con quali segnali | [Review dei topic](03-aggiornamento-dati/review-topic.md#14-un-cluster) |
+| 2 | **Criteri di decisione della review dei topic**: quando creare un topic nuovo, usare uno esistente o lasciare `Unlabelled`, e con quali segnali | [Review dei topic](03-aggiornamento-dati/review-topic.md#14-un-cluster) |
 | 3 | **Verifiche e ripristino**: quali conteggi confrontare prima e dopo un aggiornamento e come tornare indietro da un backup (modello e gerarchia dalle copie, tabelle dalla versione indicata nel log) | [Review dei topic](03-aggiornamento-dati/review-topic.md#112-cosa-viene-scritto-e-dove-restano-i-backup), [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#d1-controllare-i-risultati) |
 | 4 | **Backup automatico** di `assets/dmp_for_dash.html` e `data/project_graphs/`, da aggiungere all'elenco dei backup | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#p6-fare-il-backup) |
 

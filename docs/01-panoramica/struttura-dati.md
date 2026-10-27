@@ -62,7 +62,7 @@ Un record per ogni **progetto, organizzazione e paese** (325.173).
 | `netEcContribution` | double | Contributo UE all'organizzazione per il progetto (arrotondato all'euro quando viene scritto) |
 | `fp`, `topic_name`, `topic_name_hierarchy` | come sopra | **Copiati dal progetto** |
 
-Poiché `fp` e i topic sono copiati dal progetto, quando un progetto cambia topic vanno riscritte **entrambe** le tabelle (lo fanno `update_db.py` e `reassign_existing.py`).
+Poiché `fp` e i topic sono copiati dal progetto, quando un progetto cambia topic vanno riscritte **entrambe** le tabelle (lo fa `update_db.py`: nei suoi step e con `--review`, per i progetti che cambiano topic).
 
 ### `deliverables`
 
@@ -117,12 +117,12 @@ Il tab "Project graph" della pagina Query non calcola nulla durante la ricerca: 
 - Ogni file ha `topic_name`, `nodes` (`{projectID: {"title": ...}}`) e `edges` (`source`, `target`, `weight`, `collaborators`).
 - **Un arco collega due progetti dello stesso topic che hanno almeno un'organizzazione in comune**; `weight` è il numero di organizzazioni condivise e `collaborators` la loro lista. Il confronto è fatto sui **nomi** nella colonna `participants`.
 - Il grafo è per **nome di topic**: più id di topic con lo stesso nome (alias) condividono lo stesso file.
-- Il codice è `data_update/create_projgraph.py`. `rebuild_project_graphs` (in `reassign_existing.py`) lo esegue su tutti i progetti: lo fanno lo step 2 di `update_db.py` e, se i topic dei progetti cambiano, `reassign_existing.py`. I file dei topic spariti non vengono cancellati.
+- Il codice è `data_update/create_projgraph.py`. `rebuild_project_graphs` (in `topic_review.py`) lo esegue su tutti i progetti: lo fanno lo step 2 di `update_db.py` e `--review`, quando cambiano i topic dei progetti. I file dei topic spariti non vengono cancellati.
 - La dashboard legge i file alla prima richiesta e li tiene in memoria: dopo un aggiornamento serve riavviarla.
 
 ### Treemap
 
-`assets/treemap.json` è la figura della treemap di Concept. La genera `data_update/generate_treemap.py` a partire da `topic2hier.json`: il valore di ogni nodo è il numero di progetti di `projects_uncase` che passano da quel nodo. `update_db.py` la rigenera alla fine dello step 1 e `reassign_existing.py` dopo gli spostamenti. Si può lanciare anche da sola (`python generate_treemap.py`). Dettagli in [Pagina Concept](../02-dashboard/pagina-concept.md#treemap).
+`assets/treemap.json` è la figura della treemap di Concept. La genera `data_update/generate_treemap.py` a partire da `topic2hier.json`: il valore di ogni nodo è il numero di progetti di `projects_uncase` che passano da quel nodo. `update_db.py` la rigenera alla fine dello step 1 e dopo ogni `--review`. Si può lanciare anche da sola (`python generate_treemap.py`). Dettagli in [Pagina Concept](../02-dashboard/pagina-concept.md#treemap).
 
 ## Formati dell'export CORDIS
 

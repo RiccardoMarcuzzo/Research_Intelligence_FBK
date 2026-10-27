@@ -50,8 +50,7 @@ flowchart LR
 | `cordis_loader.py` | Legge l'export CORDIS in entrambi i formati (legacy e records). |
 | `compute_embeddings.py`, `extract_embedding.py` | Calcolo degli embedding Specter2 e bge-m3. |
 | `specter_store.py` | Gestione di `data/specter2.parquet`. |
-| `extract_topic.py`, `topic_review.py`, `topic_review_cli.py` | Assegnazione dei topic e revisione interattiva. |
-| `reassign_existing.py` | Sposta progetti già presenti su topic nuovi. |
+| `extract_topic.py`, `topic_review.py`, `topic_review_sheet.py` | Assegnazione dei topic, revisione con foglio Excel e spostamento dei progetti già presenti su topic nuovi. |
 | `create_projgraph.py` | Precalcola i grafi di collaborazione per topic. |
 | `generate_treemap.py` | Rigenera `assets/treemap.json`. |
 | `lance_maintenance.py` | Riporta le tabelle LanceDB nello stato atteso dalla dashboard. |

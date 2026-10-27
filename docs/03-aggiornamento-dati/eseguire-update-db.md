@@ -13,7 +13,7 @@
 | Passo | Tempo |
 |---|---|
 | Embedding (Specter2 e bge-m3) | Da circa **un'ora** (per entrambi) a **più ore**, a seconda della macchina su cui girano |
-| Revisione dei topic | Non più di **mezz'ora** (dipende dal numero di candidati) |
+| Revisione dei topic | Non più di **mezz'ora** per il revisore (dipende dal numero di candidati); l'aggiornamento non la aspetta, il foglio si applica dopo con un secondo lancio |
 
 ## Cosa viene modificato
 
@@ -21,15 +21,16 @@ Gli script scrivono **direttamente** nella cartella `data/` usata dalla dashboar
 
 | Cosa | Modificato da |
 |---|---|
-| `data/projects_uncase.lance` | step 1, 2 e 3 di `update_db.py`; `reassign_existing.py` |
-| `data/participants.lance` | step 2; `reassign_existing.py` |
+| `data/projects_uncase.lance` | step 1, 2 e 3 di `update_db.py`; `--review` (topic dei progetti del foglio e dei progetti vecchi che passano a topic nuovi) |
+| `data/participants.lance` | step 2; `--review` (stessi progetti) |
 | `data/deliverables.lance` | step 3 |
 | `data/publications.lance` | **mai** (step 4 non ancora implementato) |
 | `data/organisations.json` | step 2 |
-| `data/project_graphs/` | step 2 e `reassign_existing.py` |
+| `data/project_graphs/` | step 2 e `--review` |
 | `data/specter2.parquet` | step 1 |
-| `data/old_topic_model/` e `data/topic2hier.json` | revisione dei topic (solo se si accettano topic nuovi) |
-| `assets/treemap.json` | fine dello step 1; `reassign_existing.py` |
+| `data/old_topic_model/` e `data/topic2hier.json` | `--review` (solo se il foglio crea topic nuovi) |
+| `new_data/topic_review_<data>.xlsx` | step 1 (foglio da compilare, se ci sono candidati a topic nuovi) |
+| `assets/treemap.json` | fine dello step 1; `--review` |
 | `assets/dmp_for_dash.html` | **mai** (da completare) |
 
 ## Schema generale
@@ -37,10 +38,10 @@ Gli script scrivono **direttamente** nella cartella `data/` usata dalla dashboar
 ```
 PRIMA                                     update_db.py                      DOPO
 1. Ambiente                               step 1  progetti + topic          1. Controlli
-2. Export CORDIS                          step 2  partecipanti + grafi      2. (opz.) riassegnare progetti
-3. Estrazione deliverables (da completare) step 3  deliverables             3. Riavviare la dashboard
-4. Embedding                              step 4  publications (da compl.)  4. Parti statiche
-5. settings.config                        step 5  indici + treemap          5. Rotazione programmi quadro
+2. Export CORDIS                          step 2  partecipanti + grafi      2. Riavviare la dashboard
+3. Estrazione deliverables (da completare) step 3  deliverables             3. Parti statiche
+4. Embedding                              step 4  publications (da compl.)  4. Rotazione programmi quadro
+5. settings.config                        step 5  indici + treemap
 6. Backup
 ```
 
@@ -77,7 +78,7 @@ python -c "import nltk; nltk.download('stopwords')"
 **Verifica** (con l'ambiente attivo, da `data_update/`):
 
 ```bash
-python -c "import adapters, bertopic, FlagEmbedding, lancedb, hdbscan, umap, questionary; from nltk.corpus import stopwords; stopwords.words('english'); print('ok')"
+python -c "import adapters, bertopic, FlagEmbedding, lancedb, hdbscan, umap, openpyxl; from nltk.corpus import stopwords; stopwords.words('english'); print('ok')"
 ```
 
 Deve stampare `ok`. Un `ModuleNotFoundError` indica un pacchetto mancante; un `LookupError` di nltk indica che `stopwords` non è stato scaricato.
@@ -161,13 +162,13 @@ In passato è stato verificato che gli embedding ricalcolati coincidono con quel
 
 ### P5. Controllare `settings.config`
 
-Oltre ai percorsi sopra, la sezione `[topics]` contiene i parametri dell'assegnazione dei topic (soglia di similarità 0,92, dimensione minima dei cluster, file del report dei candidati e delle decisioni, bonus per i topic nuovi). I valori attuali vanno bene nella maggior parte dei casi. La sezione `[columns]` serve solo per il vecchio formato dell'export.
+Oltre ai percorsi sopra, la sezione `[topics]` contiene i parametri dell'assegnazione dei topic (soglia di similarità 0,92, dimensione minima dei cluster, file Excel della revisione, bonus per i topic nuovi). I valori attuali vanno bene nella maggior parte dei casi. La sezione `[columns]` serve solo per il vecchio formato dell'export.
 
 ### P6. Fare il backup
 
 Il backup di `data/` va fatto **a mano** prima di ogni aggiornamento.
 
-La pipeline ne fa solo alcuni da sola, in `data/backups/`, e **solo se la revisione dei topic modifica il modello**:
+La pipeline ne fa solo alcuni da sola, in `data/backups/`, e **solo quando `--review` modifica il modello**:
 
 - il modello dei topic (`old_topic_model_<data-ora>/`);
 - `topic2hier.json` (`topic2hier_<data-ora>.json`);
@@ -182,10 +183,10 @@ Tutto il resto (le tabelle `.lance`, `organisations.json`, `specter2.parquet`, `
 ## `update_db.py` in breve
 
 ```bash
-python update_db.py                       # tutti gli step
+python update_db.py                       # tutti gli step; con candidati a topic nuovi scrive anche il foglio di revisione
+python update_db.py --review FILE         # applica il foglio di revisione compilato ai progetti già nel db, e termina
 python update_db.py --projects            # solo alcuni step (anche combinati)
-python update_db.py --no-review           # senza revisione dei topic
-python update_db.py --decisions FILE      # riapplica decisioni già salvate
+python update_db.py --no-review           # senza foglio di revisione
 python update_db.py --config FILE         # usa un altro file di configurazione
 ```
 
@@ -194,8 +195,8 @@ Senza flag di step esegue tutti e quattro gli step, nell'ordine. I flag degli st
 | Flag | Effetto |
 |---|---|
 | `--projects`, `--participants`, `--deliverables`, `--publications` | Eseguono solo gli step indicati |
-| `--no-review` | Nessuna revisione dei topic: ogni progetto tiene il topic esistente più vicino |
-| `--decisions FILE` | Riapplica le decisioni salvate in quel file, senza revisione interattiva. Non usare il file di un altro aggiornamento: verrebbe applicato ai progetti che combaciano, con solo un avviso |
+| `--no-review` | Nessun foglio di revisione: ogni progetto tiene il topic esistente più vicino |
+| `--review FILE` | Applica il foglio Excel di revisione compilato ai progetti **già nel db** e termina: non legge l'export e non si combina con i flag degli step né con `--no-review` |
 | `--config FILE` | Usa un `settings.config` diverso da quello accanto allo script |
 
 | Step | Cosa fa |
@@ -209,7 +210,7 @@ Senza flag di step esegue tutti e quattro gli step, nell'ordine. I flag degli st
 
 Cose da sapere:
 
-- **Revisione dei topic.** È interattiva solo se il terminale è interattivo (non con output rediretto o in uno script). Le decisioni si salvano dopo ogni passo, quindi la sessione si può riprendere. Se si preme Ctrl-C o si rifiuta il riepilogo finale, **non viene scritto nulla nel db**. Con `--no-review` ogni progetto tiene il topic esistente più vicino. Dettagli: [Review dei topic](review-topic.md).
+- **Revisione dei topic.** Non richiede un terminale per chi la fa e **non blocca l'aggiornamento**. Il lancio normale esegue tutti gli step: i progetti poco simili ai topic esistenti entrano con un **topic provvisorio** (quello più vicino al loro cluster, `Unlabelled` se isolati) e viene scritto un foglio Excel con la data nel nome. Quando il revisore l'ha compilato, `update_db.py --review FILE` lo applica ai progetti già nel db; un errore nel foglio blocca tutto prima di scrivere. Un secondo lancio nello stesso giorno sovrascrive il foglio, in un giorno diverso ne scrive uno nuovo. Con `--no-review` non c'è foglio. Dettagli: [Review dei topic](review-topic.md).
 - **Senza progetti nuovi si ferma tutto.** Lanciato senza flag, se l'export non ha progetti nuovi si interrompe prima di partecipanti e deliverables. Per rieseguire solo quegli step si usano i flag (`--participants`, `--deliverables`).
 - **Ripresa dopo un errore.** Lo step 2 lavora sui progetti che non hanno ancora partecipanti, quindi se si interrompe dopo lo step 1 si può rilanciare con `--participants`. Lo step 3 scrive solo ciò che è cambiato: una seconda esecuzione sullo stesso export non scrive niente.
 - **Le modifiche ai progetti già presenti non vengono applicate** (obiettivi corretti, contributi rivisti, partner aggiunti o tolti): la pipeline aggiunge solo progetti nuovi. Fa eccezione la tabella dei deliverables.
@@ -222,10 +223,10 @@ Un run senza problemi stampa, in ordine, messaggi di questo tipo (alcuni compaio
 |---|---|
 | `Reading new_data/<cartella> (records format)` | Formato dell'export riconosciuto (`records` o `legacy`) |
 | `N new projects assigned to existing topics.` / `M have similarity < 0.92: ...` | Esito dell'assegnazione dei topic: quanti progetti hanno un topic esistente e quanti sono candidati a un topic nuovo |
-| `Review the candidates in new_data/topic_candidates.csv` | Report dei candidati scritto prima della revisione |
+| `Review sheet: K clusters, I isolated projects.` / `Fill in ...` | Foglio di revisione scritto (con la data nel nome); l'esecuzione prosegue, il foglio si applica poi con `--review` |
 | `projects_uncase successfully updated!` | Fine dello step 1 sui progetti |
 | `Specter2 embeddings stored (N projects in ...)` | `specter2.parquet` aggiornato; N è il totale dei progetti nell'archivio |
-| `N projects already in the db moved to new topics (log: ...)` | Progetti già presenti spostati su topic nuovi (solo se la revisione lo ha deciso); il log serve per il rollback |
+| `N projects of the sheet changed topic; M projects already in the db move to the new topics.` / `N projects moved to new topics (log: ...)` | Esito di `--review`: progetti del foglio che cambiano topic e progetti vecchi che passano ai topic nuovi; il log serve per il rollback |
 | `participants successfully updated!` | Fine dello step 2 sui partecipanti |
 | `project graph successfully updated!` | Grafi rigenerati |
 | `deliverables: A added or updated, R old rows removed; K of T export deliverables have authors.` | Esito dello step 3 |
@@ -241,7 +242,7 @@ Un run senza problemi stampa, in ordine, messaggi di questo tipo (alcuni compaio
 | `ATTENTION: project ids in new data are not int` | Nell'export c'è un `id` non numerico: va corretto prima di rilanciare |
 | `There are no new projects. Aborting session.` | Nessun progetto nuovo rispetto al db |
 | `Specter2 embeddings: ...` / `bge-m3 embeddings: ...` | Problema nei file di embedding (vedi P4) |
-| `Review interrupted. No database was modified; decisions taken so far are in ...` | Revisione interrotta: il db non è stato toccato, le decisioni sono salvate |
+| `... contains N error(s): ...` | Con `--review`: il foglio compilato ha errori (con foglio e cella); il db non è stato toccato, si corregge il foglio e si rilancia |
 | `Deliverables can only be updated from an export with one file per project` | Lo step 3 richiede il formato `records` (con il flag esplicito si ferma, altrimenti salta lo step e prosegue) |
 
 Se lo script termina con un errore Python non elencato qui, il db può essere a metà di uno step: si ripristina dal backup fatto in P6.
@@ -256,15 +257,11 @@ Verificare che i numeri tornino (progetti aggiunti, partecipanti, deliverables) 
 
 Nella cartella `data_update/` c'è anche una suite di test (`pytest test.py -v`), che lavora su una copia ridotta dei dati e non scrive mai in `data/`.
 
-### D2. (Facoltativo) Riassegnare progetti già presenti
+### D2. Riavviare la dashboard
 
-Se in una revisione precedente era stato accettato un topic nuovo e si vuole che prenda anche progetti già nel db, si usa `reassign_existing.py`. Dettagli: [Review dei topic](review-topic.md#111-spostare-progetti-già-presenti-reassign_existingpy).
+L'app legge elenco dei topic, contatori e grafi una volta sola e li tiene in memoria. Dopo l'aggiornamento, e dopo ogni `update_db.py --review`, va riavviata. Vedi [Pagina Query, sezione "Dopo un aggiornamento"](../02-dashboard/pagina-query.md#12-dopo-un-aggiornamento-del-database).
 
-### D3. Riavviare la dashboard
-
-L'app legge elenco dei topic, contatori e grafi una volta sola e li tiene in memoria. Dopo l'aggiornamento va riavviata. Vedi [Pagina Query, sezione "Dopo un aggiornamento"](../02-dashboard/pagina-query.md#12-dopo-un-aggiornamento-del-database).
-
-### D4. Aggiornare le parti statiche della dashboard
+### D3. Aggiornare le parti statiche della dashboard
 
 Non si aggiornano da sole:
 
@@ -273,7 +270,7 @@ Non si aggiornano da sole:
 
 Vedi [Pagina Concept](../02-dashboard/pagina-concept.md#parti-statiche-da-tenere-allineate-a-mano).
 
-### D5. Publications
+### D4. Publications
 
 **Da completare.** Va definito come si aggiornano le pubblicazioni (tabella `publications`, conteggio `n_publications`).
 

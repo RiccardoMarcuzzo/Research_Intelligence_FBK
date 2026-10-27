@@ -47,7 +47,7 @@ Dopo un aggiornamento del database **serve un riavvio** dell'app perché i numer
 
 - Il file è `assets/treemap.json`. Il callback `load_treemap` lo legge a ogni caricamento della pagina e lo mostra come figura Plotly.
 - Lo **genera la pipeline** (`data_update/generate_treemap.py`): la struttura dell'albero viene da `data/topic2hier.json`, e il valore di ogni nodo è il numero di progetti di `projects_uncase` che passano da quel nodo.
-- `update_db.py` lo rigenera alla fine del passo dei progetti; lo rigenera anche `reassign_existing.py`. Si può lanciare anche da solo (`python generate_treemap.py`). Vedi [Struttura dei dati](../01-panoramica/struttura-dati.md#grafi-dei-progetti-e-treemap).
+- `update_db.py` lo rigenera alla fine del passo dei progetti e dopo ogni `--review` (che cambia i topic). Si può lanciare anche da solo (`python generate_treemap.py`). Vedi [Struttura dei dati](../01-panoramica/struttura-dati.md#grafi-dei-progetti-e-treemap).
 - I colori dei cinque rami principali sono fissi nel codice (`ROOT_COLORS`); un ramo nuovo avrebbe un grigio di default.
 - I progetti `Unlabelled` non compaiono.
 
