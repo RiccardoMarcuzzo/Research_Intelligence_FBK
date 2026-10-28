@@ -12,8 +12,10 @@
 # da update_db.py.
 # ------------------------------------------------------------------------------
 
+import html
 import json
 import os
+import re
 from glob import glob
 
 import pandas as pd
@@ -31,6 +33,9 @@ ORG_COLUMNS = ['organisationID', 'name', 'countryCode', 'activityType', 'role',
                'netEcContribution', 'projectID']
 WEBLINK_COLUMNS = ['id', 'projectID', 'physUrl', 'type']
 DELIVERABLE_COLUMNS = ['id', 'projectID', 'title', 'physUrl']
+PUBLICATION_COLUMNS = ['id', 'projectID', 'title', 'authors', 'physUrl']
+# affiliazione degli autori: l'export non la ha, la dashboard mostra solo il nome
+UNKNOWN_AFFILIATION = 'Unknown'
 
 
 class CordisFormatError(Exception):
@@ -144,6 +149,25 @@ def load_deliverables(folder):
     return df
 
 
+def load_publications(folder):
+    """Pubblicazioni dell'export: id (stringa CORDIS, es. '101069359_24824_PUBLIHORIZON'),
+    projectID, title, authors (JSON {nome: 'Unknown'}, '{}' se mancano: l'export non ha le
+    affiliazioni), physUrl (https://doi.org/<doi>, None senza DOI). Solo la collection
+    '/publication' (non '/pubsum' né '/ipr'). Solo formato records."""
+    if detect_format(folder) == LEGACY:
+        raise CordisFormatError(f'{folder} is an old-format export: publications are '
+                                'only in the format with one file per project.')
+
+    rows = [row for r in _iter_records(folder) for row in _record_publications(r)]
+    df = pd.DataFrame(rows, columns=PUBLICATION_COLUMNS)
+    df['projectID'] = _to_id(df['projectID'])
+    dup = df.loc[df['id'].duplicated(), 'id']
+    if not dup.empty:
+        raise CordisFormatError(f'Publications in more than one project of {folder}: '
+                                f'{sorted(dup.unique().tolist())[:10]}')
+    return df
+
+
 # ------------------------------------------------------------------------------
 # formato records
 # ------------------------------------------------------------------------------
@@ -223,6 +247,37 @@ def _record_deliverables(record):
             'projectID': record.get('id'),
             'title': result.get('title'),
             'physUrl': links[0].get('physUrl') if links else None,
+        }
+
+
+def _split_authors(text):
+    """Nomi dal campo <authors> di una pubblicazione, che è testo libero: separati da ';'
+    se ce n'è almeno uno, altrimenti da virgole, con un 'and' o '&' prima dell'ultimo.
+    L'ordine è quello dell'export, i doppioni sono tolti. Euristico: un elenco del tipo
+    'Rossi, M., Bianchi, L.' viene spezzato in pezzi che non sono nomi interi."""
+    text = html.unescape(text or '').strip().strip('"')
+    parts = re.split(r';' if ';' in text else r',', text)
+    names = []
+    for part in parts:
+        names += re.split(r'\s+(?:and|&)\s+', part.strip())
+    return list(dict.fromkeys(n.strip().strip('"').rstrip('#*').strip() for n in names if n.strip()))
+
+
+def _record_publications(record):
+    # le pubblicazioni sono i risultati della collection '/publication'; autori, anno ecc.
+    # sono in 'details', un frammento xml senza radice
+    for result in _associations(record, 'result'):
+        if not any(c.get('code') == '/publication' for c in _categories(result, 'collection')):
+            continue
+        match = re.search(r'<authors>(.*?)</authors>', result.get('details') or '', re.S)
+        names = _split_authors(match.group(1)) if match else []
+        doi = ((result.get('identifiers') or {}).get('doi') or '').strip()
+        yield {
+            'id': result.get('id'),
+            'projectID': record.get('id'),
+            'title': result.get('title'),
+            'authors': json.dumps({n: UNKNOWN_AFFILIATION for n in names}, ensure_ascii=False),
+            'physUrl': f'https://doi.org/{doi}' if doi else None,
         }
 
 

@@ -30,7 +30,8 @@ from extract_embedding import extract_bgem3
 from extract_topic import assign_topics, apply_review_sheet
 from topic_review import ReviewAborted, write_moves, rebuild_project_graphs
 from format_name import format_name
-from cordis_loader import load_projects, load_organizations, load_deliverables, detect_format, CordisFormatError
+from cordis_loader import load_projects, load_organizations, load_deliverables, load_publications, \
+    detect_format, CordisFormatError, PUBLICATION_COLUMNS
 from lance_maintenance import repair_tables
 from specter_store import update_store, embeddings_for
 from generate_treemap import write_treemap, load_topic2hier
@@ -84,6 +85,8 @@ if not NEW_DATA_FOLDER_NAME:
 # compute_embeddings.py; vuoto = calcolati qui
 BGE_EMBS = config['paths']['bge_embedding_file']
 SPECTER_EMBS = config['paths']['specter2_embedding_file']
+# fonte esterna delle pubblicazioni; vuoto (o chiave assente) = quelle dell'export
+PUBLICATIONS_FILE = config.get('paths', 'publications_file', fallback='').strip()
 ORG_JSON_PATH = os.path.join(os.path.dirname(__file__), '../data/organisations.json')
 TOPIC_HIER_PATH = os.path.join(os.path.dirname(__file__), '../data/topic2hier.json')
 # treemap della pagina Concept, rigenerata da topic2hier.json dopo lo step 1
@@ -456,8 +459,91 @@ if UPDATE_DELIVERABLES:
 
 
 #* STEP 4: AGGIORNAMENTO PUBLICATIONS_TBL
+# Le pubblicazioni già nel db (503k, da Scopus, con le affiliazioni degli autori) non si
+# toccano. Senza una fonte esterna in settings.config (publications_file) si usano quelle
+# dell'export, solo per i progetti dell'export con n_publications == 0 (i nuovi, ma anche
+# vecchi progetti senza pubblicazioni); gli altri restano come sono. Un secondo run non
+# scrive nulla: i progetti trattati hanno ormai n_publications > 0.
 if UPDATE_PUBLICATIONS:
     publications_tbl = db.open_table("publications")
+    if PUBLICATIONS_FILE:
+        print(f'Publications: external source ({PUBLICATIONS_FILE}) is not handled by this script, skipped.')
+        if args.publications:
+            sys.exit(1)
+    elif detect_format(NEW_DATA_FOLDER_NAME) == 'legacy':
+        print('Publications can only be read from an export with one file per project '
+              f'(project-rcn-*.json): {NEW_DATA_FOLDER_NAME} is in the old format.')
+        if args.publications:
+            sys.exit(1)
+    else:
+        # 4.1 progetti dell'export già nel db senza pubblicazioni
+        current_counts = (
+            projects_tbl.search().select(['projectID', 'n_publications']).limit(None).to_pandas()
+            .set_index('projectID')['n_publications']
+        )
+        todo = set(current_counts.index[current_counts == 0]) & export_project_ids
+
+        if todo:
+            try:
+                export_pubs = load_publications(NEW_DATA_FOLDER_NAME)
+            except CordisFormatError as e:
+                print(e)
+                sys.exit(1)
+            if not is_integer_dtype(export_pubs['projectID']):
+                print("ATTENTION: some publications have a non-numeric project id:")
+                print(export_pubs[export_pubs['projectID'].isna()])
+                sys.exit(1)
+            new_pubs = export_pubs[export_pubs['projectID'].isin(todo)]
+
+            # 4.2 un progetto con n_publications == 0 ma righe nella tabella è incoerente:
+            # non si aggiunge nulla, per non duplicare
+            ids = sorted(int(p) for p in new_pubs['projectID'].unique())
+            have_rows = set()
+            for i in range(0, len(ids), 1000):
+                found = (
+                    publications_tbl.search()
+                    .where(f"projectID IN ({', '.join(map(str, ids[i:i + 1000]))})")
+                    .select(['projectID']).limit(None).to_arrow().column('projectID').unique().to_pylist()
+                )
+                have_rows.update(found)
+            if have_rows:
+                print(f'WARNING: {len(have_rows)} projects have n_publications == 0 but rows in the '
+                      f'publications table, skipped: {sorted(have_rows)[:10]}')
+                new_pubs = new_pubs[~new_pubs['projectID'].isin(have_rows)]
+        else:
+            new_pubs = pd.DataFrame(columns=PUBLICATION_COLUMNS)
+
+        if new_pubs.empty:
+            print(f'publications: nothing to add ({len(todo)} projects of the export have none).')
+        else:
+            # 4.3 colonna id come in deliverables: chiave tra un aggiornamento e l'altro (la
+            # dashboard non la legge); le righe scritte prima restano con id null
+            if 'id' not in publications_tbl.schema.names:
+                publications_tbl.add_columns(pa.field('id', pa.string()))
+            (
+                publications_tbl
+                .merge_insert("id")
+                .when_matched_update_all()
+                .when_not_matched_insert_all()
+                .execute(pa.Table.from_pandas(new_pubs[publications_tbl.schema.names],
+                                              schema=publications_tbl.schema, preserve_index=False))
+            )
+            publications_tbl.create_index("projectID", config=BTree())
+            publications_tbl.create_index("id", config=BTree())
+
+            # 4.4 n_publications dei progetti con pubblicazioni nuove (la dashboard lo mostra)
+            counts = new_pubs.groupby('projectID').size()
+            update_df = pd.DataFrame({
+                'projectID': counts.index.astype(projects_tbl.schema.field('projectID').type.to_pandas_dtype()),
+                'n_publications': counts.values.astype(projects_tbl.schema.field('n_publications').type.to_pandas_dtype()),
+            })
+            (
+                projects_tbl
+                .merge_insert("projectID")
+                .when_matched_update_all()
+                .execute(update_df)
+            )
+            print(f'publications: {len(new_pubs)} added for {len(counts)} projects.')
 
 
 #* STEP 5: CONVERSIONE E INDEXING FINALE
