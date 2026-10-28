@@ -87,6 +87,9 @@ BGE_EMBS = config['paths']['bge_embedding_file']
 SPECTER_EMBS = config['paths']['specter2_embedding_file']
 # fonte esterna delle pubblicazioni; vuoto (o chiave assente) = quelle dell'export
 PUBLICATIONS_FILE = config.get('paths', 'publications_file', fallback='').strip()
+# deliverables scritti da extract_deliverables.py (con gli autori); vuoto (o chiave assente) =
+# quelli dell'export, con gli autori già presenti nel db
+DELIVERABLES_FILE = config.get('paths', 'deliverables_file', fallback='').strip()
 ORG_JSON_PATH = os.path.join(os.path.dirname(__file__), '../data/organisations.json')
 TOPIC_HIER_PATH = os.path.join(os.path.dirname(__file__), '../data/topic2hier.json')
 # treemap della pagina Concept, rigenerata da topic2hier.json dopo lo step 1
@@ -352,24 +355,47 @@ if UPDATE_PARTICIPANTS:
 
 #* STEP 3: AGGIORNAMENTO DELIVERABLES_TBL
 # Per i progetti dell'export la tabella segue l'export: titolo ufficiale e physUrl
-# aggiornato, deliverables tolti da CORDIS cancellati. Gli autori (estratti dai pdf, vedi
-# legacy_extract_deliverables.py) si conservano: per id, oppure per physUrl dalle righe
-# scritte prima che la tabella avesse la colonna id. I progetti assenti dall'export
+# aggiornato, deliverables tolti da CORDIS cancellati. Gli autori (estratti dai pdf) si
+# conservano: per id, oppure per physUrl dalle righe scritte prima che la tabella avesse la
+# colonna id. Se in settings.config c'è deliverables_file (scritto da extract_deliverables.py,
+# che fa lo stesso riuso e legge i pdf degli altri) si usa quel file al posto dell'export e
+# dei suoi autori. I progetti assenti dall'export
 # (es. H2020) non vengono toccati. Al primo run vengono riscritti tutti i deliverables dei
 # progetti dell'export, dai successivi solo quelli nuovi o cambiati.
 if UPDATE_DELIVERABLES:
-    # 3.1 deliverables dell'export (solo formato records: il vecchio non ha i titoli)
-    if detect_format(NEW_DATA_FOLDER_NAME) == 'legacy':
+    # 3.1 deliverables: dal file di extract_deliverables.py se configurato, altrimenti
+    # dall'export (solo formato records: il vecchio non ha i titoli)
+    if not DELIVERABLES_FILE and detect_format(NEW_DATA_FOLDER_NAME) == 'legacy':
         print('Deliverables can only be updated from an export with one file per project '
               f'(project-rcn-*.json): {NEW_DATA_FOLDER_NAME} is in the old format.')
         if args.deliverables:
             sys.exit(1)
     else:
-        try:
-            export_deliv = load_deliverables(NEW_DATA_FOLDER_NAME)
-        except CordisFormatError as e:
-            print(e)
-            sys.exit(1)
+        if DELIVERABLES_FILE:
+            if not os.path.exists(DELIVERABLES_FILE):
+                print(f'deliverables_file {DELIVERABLES_FILE} does not exist: run extract_deliverables.py '
+                      'or leave deliverables_file empty to use the export.')
+                sys.exit(1)
+            export_deliv = pd.read_parquet(DELIVERABLES_FILE)
+            missing = {'id', 'projectID', 'title', 'physUrl', 'authors'} - set(export_deliv.columns)
+            if missing:
+                print(f'{DELIVERABLES_FILE} lacks the columns {sorted(missing)} (the file must be an output '
+                      'of extract_deliverables.py).')
+                sys.exit(1)
+            if export_deliv['id'].isna().any() or export_deliv['id'].duplicated().any():
+                print(f'{DELIVERABLES_FILE}: deliverable ids must be present and unique.')
+                sys.exit(1)
+            if 'status' in export_deliv.columns:
+                n_todo = int(export_deliv['status'].isin(['pending', 'error']).sum())
+                if n_todo:
+                    print(f'ATTENTION: {n_todo} deliverables in {DELIVERABLES_FILE} have no authors yet '
+                          '(status pending/error): rerun extract_deliverables.py to read them.')
+        else:
+            try:
+                export_deliv = load_deliverables(NEW_DATA_FOLDER_NAME)
+            except CordisFormatError as e:
+                print(e)
+                sys.exit(1)
         if not is_integer_dtype(export_deliv['projectID']):
             print("ATTENTION: some deliverables have a non-numeric project id:")
             print(export_deliv[export_deliv['projectID'].isna()])
@@ -383,12 +409,16 @@ if UPDATE_DELIVERABLES:
         current = deliverables_tbl.to_pandas()
 
         # 3.2 righe attese per i progetti dell'export, con gli autori già estratti
-        authors_by_id = current.dropna(subset=['id']).set_index('id')['authors']
-        authors_by_url = current.dropna(subset=['physUrl']).drop_duplicates('physUrl').set_index('physUrl')['authors']
         target = export_deliv.copy()
-        authors = target['id'].map(authors_by_id)
-        authors = authors.where(authors.notna(), target['physUrl'].map(authors_by_url))
-        target['authors'] = authors.where(authors.notna(), '{}')
+        if DELIVERABLES_FILE:
+            # il file ha già gli autori (extract_deliverables.py li riusa dal db): vale quello che c'è
+            target['authors'] = target['authors'].where(target['authors'].notna(), '{}')
+        else:
+            authors_by_id = current.dropna(subset=['id']).set_index('id')['authors']
+            authors_by_url = current.dropna(subset=['physUrl']).drop_duplicates('physUrl').set_index('physUrl')['authors']
+            authors = target['id'].map(authors_by_id)
+            authors = authors.where(authors.notna(), target['physUrl'].map(authors_by_url))
+            target['authors'] = authors.where(authors.notna(), '{}')
         target = target[deliverables_tbl.schema.names]
 
         # 3.3 nuovi o cambiati (titolo, link o progetto): inseriti o aggiornati per id
