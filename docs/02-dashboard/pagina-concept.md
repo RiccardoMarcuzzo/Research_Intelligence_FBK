@@ -56,6 +56,9 @@ Poiché è un file letto a ogni richiesta, **dopo un aggiornamento la treemap ca
 ### Mappa dei progetti
 
 - È un file HTML già pronto, `assets/dmp_for_dash.html` (circa 4 MB), mostrato in un `iframe`, prodotto con la libreria *datamapplot*.
+- Lo **genera la pipeline** (`data_update/generate_datamapplot_representation.py`). Le coordinate dei punti vengono da `data/umap_2d.parquet`; i progetti nuovi vengono proiettati sulla mappa esistente con il modello UMAP salvato in `data/umap_model.joblib`, senza spostare quelli già presenti. Titoli e colori dei topic vengono da `projects_uncase`.
+- `update_db.py` la rigenera subito dopo la treemap (fine del passo dei progetti e dopo ogni `--review`). Si può lanciare anche da sola (`python generate_datamapplot_representation.py`). Se manca il modello o la generazione fallisce, l'aggiornamento non si ferma: stampa `WARNING: datamapplot not updated (...)` e il file vecchio resta. Dettagli in [Struttura dei dati](../01-panoramica/struttura-dati.md#mappa-dei-progetti).
+- Come la treemap, è un file letto a ogni richiesta, quindi dopo un aggiornamento cambia senza riavviare l'app.
 - Quando l'utente clicca un punto, la pagina HTML invia un messaggio al genitore (`postMessage` con tipo `point-clicked` e l'`id` del progetto). Un callback clientside lo salva in `message-store`, il pannello laterale si apre e `scripts/_overview.py` legge il progetto da `projects_uncase` (`populate_doc_canvas`).
 
 ## Parti statiche da tenere allineate a mano
@@ -65,7 +68,6 @@ Queste cose **non si aggiornano da sole** con la pipeline:
 | Cosa | Dove | Problema |
 |---|---|---|
 | Nota "Data regarding Horizon Europe projects are current through the end of 2024." | `pages/overview.py`, testo introduttivo | La data è scritta nel testo. Va aggiornata a ogni export. |
-| Mappa dei progetti | `assets/dmp_for_dash.html` | I progetti nuovi non compaiono finché il file non viene rigenerato. |
 | Testo sulla metodologia (50 combinazioni di iperparametri, soglia 0,99 per il rumore) | `pages/overview.py` | Descrive il lavoro fatto in origine; non cambia con gli aggiornamenti, ma va riletto se il metodo cambia. |
 | Sezione "Meet the Team" | `pages/overview.py` | Nomi, ruoli ed e-mail sono scritti nel codice, e le immagini stanno in `assets/img/`. Vanno aggiornati quando cambia chi segue il progetto. |
 

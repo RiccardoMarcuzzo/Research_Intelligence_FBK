@@ -34,6 +34,7 @@ from cordis_loader import load_projects, load_organizations, load_deliverables, 
 from lance_maintenance import repair_tables
 from specter_store import update_store, embeddings_for
 from generate_treemap import write_treemap, load_topic2hier
+from generate_datamapplot_representation import update_datamapplot
 
 parser = argparse.ArgumentParser(description="Updates Research Intelligence data.")
 parser.add_argument("--projects", action="store_true", help="updates projects")
@@ -87,6 +88,10 @@ ORG_JSON_PATH = os.path.join(os.path.dirname(__file__), '../data/organisations.j
 TOPIC_HIER_PATH = os.path.join(os.path.dirname(__file__), '../data/topic2hier.json')
 # treemap della pagina Concept, rigenerata da topic2hier.json dopo lo step 1
 TREEMAP_PATH = os.path.join(os.path.dirname(__file__), '../assets/treemap.json')
+# mappa della pagina Concept (datamapplot), rigenerata insieme alla treemap; modello UMAP e
+# coordinate stanno in data/ (vedi generate_datamapplot_representation.py)
+DMP_PATH = os.path.join(os.path.dirname(__file__), '../assets/dmp_for_dash.html')
+DATA_DIR = os.path.join(os.path.dirname(__file__), '../data')
 PROJECT_GRAPH_DIR = os.path.join(os.path.dirname(__file__), '../data/project_graphs')
 # embedding Specter2 di tutti i progetti del db (projectID, vector): servono a
 # riassegnare i progetti già nel db quando la revisione crea un topic nuovo
@@ -138,6 +143,7 @@ if args.review:
         print('project graph successfully updated!')
         write_treemap(projects_tbl, load_topic2hier(TOPIC_HIER_PATH), TREEMAP_PATH)
         print(f'treemap successfully updated ({TREEMAP_PATH})!')
+        update_datamapplot(projects_tbl, DATA_DIR, DMP_PATH)
     sys.exit(0)
 
 
@@ -464,6 +470,7 @@ if UPDATE_PROJECTS:
     # topic nuovi, progetti nuovi e spostati cambiano la treemap della pagina Concept
     write_treemap(projects_tbl, load_topic2hier(TOPIC_HIER_PATH), TREEMAP_PATH)
     print(f'treemap successfully updated ({TREEMAP_PATH})!')
+    update_datamapplot(projects_tbl, DATA_DIR, DMP_PATH)
 
 
 if UPDATE_PARTICIPANTS:

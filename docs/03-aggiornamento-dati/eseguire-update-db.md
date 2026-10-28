@@ -17,7 +17,7 @@
 
 ## Cosa viene modificato
 
-Gli script scrivono **direttamente** nella cartella `data/` usata dalla dashboard (e in `assets/treemap.json`): non serve copiare file a mano. Per questo conviene fare prima il backup (vedi più sotto).
+Gli script scrivono **direttamente** nella cartella `data/` usata dalla dashboard (e in `assets/treemap.json` e `assets/dmp_for_dash.html`): non serve copiare file a mano. Per questo conviene fare prima il backup (vedi più sotto).
 
 | Cosa | Modificato da |
 |---|---|
@@ -28,10 +28,11 @@ Gli script scrivono **direttamente** nella cartella `data/` usata dalla dashboar
 | `data/organisations.json` | step 2 |
 | `data/project_graphs/` | step 2 e `--review` |
 | `data/specter2.parquet` | step 1 |
+| `data/umap_2d.parquet` | fine dello step 1; `--review` (coordinate dei progetti nuovi sulla mappa) |
 | `data/old_topic_model/` e `data/topic2hier.json` | `--review` (solo se il foglio crea topic nuovi) |
 | `new_data/topic_review_<data>.xlsx` | step 1 (foglio da compilare, se ci sono candidati a topic nuovi) |
 | `assets/treemap.json` | fine dello step 1; `--review` |
-| `assets/dmp_for_dash.html` | **mai** (da completare) |
+| `assets/dmp_for_dash.html` | fine dello step 1; `--review` |
 
 ## Schema generale
 
@@ -41,7 +42,7 @@ PRIMA                                     update_db.py                      DOPO
 2. Export CORDIS                          step 2  partecipanti + grafi      2. Riavviare la dashboard
 3. Estrazione deliverables (da completare) step 3  deliverables             3. Parti statiche
 4. Embedding                              step 4  publications (da compl.)  4. Rotazione programmi quadro
-5. settings.config                        step 5  indici + treemap
+5. settings.config                        step 5  indici + treemap + mappa
 6. Backup
 ```
 
@@ -78,7 +79,7 @@ python -c "import nltk; nltk.download('stopwords')"
 **Verifica** (con l'ambiente attivo, da `data_update/`):
 
 ```bash
-python -c "import adapters, bertopic, FlagEmbedding, lancedb, hdbscan, umap, openpyxl; from nltk.corpus import stopwords; stopwords.words('english'); print('ok')"
+python -c "import adapters, bertopic, FlagEmbedding, lancedb, hdbscan, umap, datamapplot, openpyxl; from nltk.corpus import stopwords; stopwords.words('english'); print('ok')"
 ```
 
 Deve stampare `ok`. Un `ModuleNotFoundError` indica un pacchetto mancante; un `LookupError` di nltk indica che `stopwords` non è stato scaricato.
@@ -87,7 +88,7 @@ Deve stampare `ok`. Un `ModuleNotFoundError` indica un pacchetto mancante; un `L
 
 **File `.env` (solo per l'estrazione dei deliverables).** Lo script `legacy_extract_deliverables.py` legge da `.env` la chiave `FEATHERLESS_API_KEY` (servizio LLM usato per estrarre gli autori) e `INDEX`. `update_db.py` e `compute_embeddings.py` non lo usano. Vedi P3 (da completare).
 
-**Dati necessari**: la pipeline lavora sulla cartella `data/` nella radice della repo (percorso `../data` visto da `data_update/`). Deve esistere, con le tabelle e i file elencati in [Avvio della dashboard](../02-dashboard/avvio-dashboard.md), più `data/old_topic_model/`, `data/specter2.parquet` e `data/topic2hier.json`.
+**Dati necessari**: la pipeline lavora sulla cartella `data/` nella radice della repo (percorso `../data` visto da `data_update/`). Deve esistere, con le tabelle e i file elencati in [Avvio della dashboard](../02-dashboard/avvio-dashboard.md), più `data/old_topic_model/`, `data/specter2.parquet`, `data/topic2hier.json`, `data/umap_model.joblib` e `data/umap_2d.parquet` (questi ultimi due servono alla mappa di Concept; senza, l'aggiornamento prosegue e la mappa non viene rigenerata).
 
 ### P2. Scaricare l'export CORDIS
 
@@ -176,7 +177,7 @@ La pipeline ne fa solo alcuni da sola, in `data/backups/`, e **solo quando `--re
 
 Da aggiungere a questo elenco: `assets/dmp_for_dash.html` e `data/project_graphs/`.
 
-Tutto il resto (le tabelle `.lance`, `organisations.json`, `specter2.parquet`, `assets/treemap.json`) va copiato a mano.
+Tutto il resto (le tabelle `.lance`, `organisations.json`, `specter2.parquet`, `umap_2d.parquet`, `assets/treemap.json`) va copiato a mano.
 
 ---
 
@@ -202,7 +203,7 @@ Senza flag di step esegue tutti e quattro gli step, nell'ordine. I flag degli st
 | Step | Cosa fa |
 |---|---|
 | **0** | Legge l'export, tiene solo i progetti **non ancora presenti** nel db e controlla che gli id siano numerici. |
-| **1. Progetti** | Aggiunge i progetti nuovi a `projects_uncase` (con il loro embedding bge-m3) e assegna loro un topic con Specter2. I progetti poco simili a ogni topic esistente finiscono nella **revisione dei topic**. Aggiorna `specter2.parquet`, sposta eventuali progetti già presenti sui topic appena creati e rigenera la treemap. |
+| **1. Progetti** | Aggiunge i progetti nuovi a `projects_uncase` (con il loro embedding bge-m3) e assegna loro un topic con Specter2. I progetti poco simili a ogni topic esistente finiscono nella **revisione dei topic**. Aggiorna `specter2.parquet`, sposta eventuali progetti già presenti sui topic appena creati, rigenera la treemap e aggiorna la mappa di Concept (coordinate dei progetti nuovi e `assets/dmp_for_dash.html`). |
 | **2. Partecipanti** | Per i progetti senza partecipanti aggiunge le righe a `participants` (una per paese se l'organizzazione ne ha più d'uno), aggiorna `organisations.json` con i nomi puliti e rigenera i grafi in `project_graphs/`. |
 | **3. Deliverables** | Allinea `deliverables` all'export (titoli ufficiali, link correnti, deliverables spariti cancellati), conservando gli autori già estratti. Aggiorna `n_deliverables`. Solo con il formato a un file per progetto. |
 | **4. Publications** | **Da completare.** Oggi il codice apre la tabella e non fa altro: i progetti nuovi hanno `n_publications = 0`. |
@@ -232,6 +233,8 @@ Un run senza problemi stampa, in ordine, messaggi di questo tipo (alcuni compaio
 | `deliverables: A added or updated, R old rows removed; K of T export deliverables have authors.` | Esito dello step 3 |
 | `n_deliverables updated for N projects.` | Conteggi aggiornati (compare solo se cambiati) |
 | `treemap successfully updated (...)!` | Treemap di Concept rigenerata |
+| `datamapplot successfully updated (...): N projects, K new coordinates.` | Mappa di Concept rigenerata: N punti disegnati, K coordinate nuove calcolate |
+| `WARNING: datamapplot not updated (...)` | Non è un errore bloccante: manca il modello UMAP o `umap_2d.parquet`, la libreria `datamapplot` non è installata o la generazione è fallita. Il db è comunque aggiornato e la mappa vecchia resta. Si rilancia da sola con `python generate_datamapplot_representation.py` |
 
 **Messaggi che indicano che l'esecuzione si è fermata** (il processo termina senza completare lo step):
 
@@ -263,10 +266,7 @@ L'app legge elenco dei topic, contatori e grafi una volta sola e li tiene in mem
 
 ### D3. Aggiornare le parti statiche della dashboard
 
-Non si aggiornano da sole:
-
-- la nota sulla data dei dati nel testo introduttivo di Concept;
-- la mappa dei progetti di Concept (`assets/dmp_for_dash.html`): **da completare**, non è ancora definito come si rigenera.
+Non si aggiorna da sola la nota sulla data dei dati nel testo introduttivo di Concept. La mappa dei progetti, invece, la rigenera `update_db.py` (vedi [Mappa dei progetti](../01-panoramica/struttura-dati.md#mappa-dei-progetti)).
 
 Vedi [Pagina Concept](../02-dashboard/pagina-concept.md#parti-statiche-da-tenere-allineate-a-mano).
 

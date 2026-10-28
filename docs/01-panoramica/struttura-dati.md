@@ -20,9 +20,11 @@ La cartella `data/` **non è in git** (è nel `.gitignore`) e senza di essa la d
 | `bge-m3-onnx/` | Modello bge-m3 in formato ONNX, per trasformare in vettore il testo libero della ricerca (circa 2 GB) | dashboard |
 | `old_topic_model/` | Modello BERTopic dei topic ([Review dei topic](../03-aggiornamento-dati/review-topic.md#21-il-modello-dei-topic)) | pipeline |
 | `specter2.parquet` | Embedding Specter2 di ogni progetto ([Review dei topic](../03-aggiornamento-dati/review-topic.md#210-archivio-degli-embedding-specter2)) | pipeline |
+| `umap_model.joblib` | Modello UMAP della mappa di Concept (circa 1,1 GB: contiene i dati di training), usato per proiettare i progetti nuovi ([Mappa dei progetti](#mappa-dei-progetti)) | pipeline |
+| `umap_2d.parquet` | Coordinate 2D di ogni progetto della mappa (`projectID`, `vector_2d`, non ruotate) | pipeline |
 | `backups/` | Copie automatiche di modello e gerarchia e log degli spostamenti | pipeline |
 
-Due file generati dalla pipeline stanno invece in `assets/` (e quindi in git): `treemap.json` (la treemap di Concept) e `dmp_for_dash.html` (la mappa di Concept, non generata dalla pipeline: vedi [Pagina Concept](../02-dashboard/pagina-concept.md)).
+Due file generati dalla pipeline stanno invece in `assets/` (e quindi in git): `treemap.json` (la treemap di Concept) e `dmp_for_dash.html` (la mappa di Concept: vedi [Pagina Concept](../02-dashboard/pagina-concept.md)).
 
 Quali file vengono modificati da ogni passo dell'aggiornamento è in [Eseguire l'aggiornamento dei dati](../03-aggiornamento-dati/eseguire-update-db.md#cosa-viene-modificato).
 
@@ -123,6 +125,17 @@ Il tab "Project graph" della pagina Query non calcola nulla durante la ricerca: 
 ### Treemap
 
 `assets/treemap.json` è la figura della treemap di Concept. La genera `data_update/generate_treemap.py` a partire da `topic2hier.json`: il valore di ogni nodo è il numero di progetti di `projects_uncase` che passano da quel nodo. `update_db.py` la rigenera alla fine dello step 1 e dopo ogni `--review`. Si può lanciare anche da sola (`python generate_treemap.py`). Dettagli in [Pagina Concept](../02-dashboard/pagina-concept.md#treemap).
+
+### Mappa dei progetti
+
+`assets/dmp_for_dash.html` è la mappa di Concept. La genera `data_update/generate_datamapplot_representation.py`; `update_db.py` la rigenera subito dopo la treemap.
+
+- **`data/umap_model.joblib`** è il modello UMAP con cui fu fatta la mappa originale (vicini 15, distanza minima 0, metrica coseno, `random_state=1`). Pesa circa 1,1 GB perché contiene i dati di training, necessari a `transform`. Non cambia con gli aggiornamenti.
+- **`data/umap_2d.parquet`** associa ogni `projectID` (int32) alle sue coordinate 2D (`vector_2d`), **non ruotate**: la rotazione si applica solo al momento del disegno. Il modello da solo non basta, perché le sue coordinate di training non hanno gli id.
+- **Progetti nuovi.** Sono quelli presenti in `specter2.parquet` ma non in `umap_2d.parquet`: il codice li proietta con il modello e li aggiunge. I punti già presenti non si spostano. Dato che si basa sul confronto tra i due file, un aggiornamento interrotto o dei progetti rimasti senza coordinate vengono recuperati al lancio successivo. I punti nuovi sono posizionati rispetto ai dati di training originali: dopo molti aggiornamenti può convenire rifare il fit completo.
+- **Disegno.** Titoli ed etichette (un livello per colonna di `topic_name_hierarchy`, foglia per prima) vengono da `projects_uncase`; si disegnano solo i progetti che hanno coordinate. Con circa 59.000 punti ci vogliono circa 25 secondi.
+- **Se qualcosa manca** (modello, file delle coordinate, libreria `datamapplot`) o la generazione fallisce, la pipeline non si ferma: stampa `WARNING: datamapplot not updated (...)` e il file vecchio resta.
+- **Prima creazione di `umap_2d.parquet`** (già fatta): `python generate_datamapplot_representation.py --bootstrap FILE`, dove FILE è un parquet con `projectID` (stringa) e `vector` (2D) nello stesso ordine dei dati di training del modello. Tiene solo gli id numerici presenti in `specter2.parquet`.
 
 ## Formati dell'export CORDIS
 

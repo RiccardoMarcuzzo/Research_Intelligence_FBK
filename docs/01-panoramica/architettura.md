@@ -53,6 +53,7 @@ flowchart LR
 | `extract_topic.py`, `topic_review.py`, `topic_review_sheet.py` | Assegnazione dei topic, revisione con foglio Excel e spostamento dei progetti già presenti su topic nuovi. |
 | `create_projgraph.py` | Precalcola i grafi di collaborazione per topic. |
 | `generate_treemap.py` | Rigenera `assets/treemap.json`. |
+| `generate_datamapplot_representation.py` | Aggiorna le coordinate 2D dei progetti nuovi con il modello UMAP e rigenera `assets/dmp_for_dash.html`. |
 | `lance_maintenance.py` | Riporta le tabelle LanceDB nello stato atteso dalla dashboard. |
 | `format_name.py` | Normalizzazione dei nomi (utility). |
 | `settings.config` | Configurazione della pipeline. |
@@ -63,7 +64,7 @@ I dettagli sull'aggiornamento stanno in [Eseguire l'aggiornamento dei dati](../0
 
 ### Dati (`data/`, non in git)
 
-La cartella `data/` contiene le quattro tabelle LanceDB (`projects_uncase`, `participants`, `deliverables`, `publications`), il modello di embedding `bge-m3-onnx/`, la gerarchia dei topic (`topic2hier.json`), i grafi dei progetti (`project_graphs/`) e i file usati solo dalla pipeline (modello dei topic, `specter2.parquet`, backup). Il ruolo e il formato di ciascun elemento sono in [Struttura dei dati](struttura-dati.md). Per l'elenco dei file necessari all'avvio vedi [Avvio della dashboard](../02-dashboard/avvio-dashboard.md).
+La cartella `data/` contiene le quattro tabelle LanceDB (`projects_uncase`, `participants`, `deliverables`, `publications`), il modello di embedding `bge-m3-onnx/`, la gerarchia dei topic (`topic2hier.json`), i grafi dei progetti (`project_graphs/`) e i file usati solo dalla pipeline (modello dei topic, `specter2.parquet`, `umap_model.joblib`, `umap_2d.parquet`, backup). Il ruolo e il formato di ciascun elemento sono in [Struttura dei dati](struttura-dati.md). Per l'elenco dei file necessari all'avvio vedi [Avvio della dashboard](../02-dashboard/avvio-dashboard.md).
 
 ## Cosa succede all'avvio
 
@@ -94,7 +95,7 @@ La cartella `data/` contiene le quattro tabelle LanceDB (`projects_uncase`, `par
 
 - I tre contatori vengono da `utils.py`.
 - La treemap viene da `assets/treemap.json`, generato dalla pipeline (`generate_treemap.py`).
-- La mappa dei progetti è un file HTML statico, `assets/dmp_for_dash.html`, mostrato in un iframe. Un clic su un punto manda un messaggio alla pagina (`postMessage`), che apre il pannello laterale con i dettagli del progetto letti da `projects_uncase`.
+- La mappa dei progetti è un file HTML statico, `assets/dmp_for_dash.html` (generato dalla pipeline con `generate_datamapplot_representation.py`), mostrato in un iframe. Un clic su un punto manda un messaggio alla pagina (`postMessage`), che apre il pannello laterale con i dettagli del progetto letti da `projects_uncase`.
 
 ## Servizi esterni
 

@@ -51,7 +51,6 @@ Parti della documentazione o del progetto che non sono ancora definite. Quando u
 |---|---|---|
 | 5 | **Estrazione dei deliverables** (`extract_deliverables`): nella repo c'è solo la vecchia versione, e lo step 3 di `update_db.py` non ne legge il risultato; i deliverables nuovi restano senza autori | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#p3-estrarre-i-deliverables-da-completare), [Struttura dei dati](01-panoramica/struttura-dati.md#deliverables-step-3-di-update_dbpy) |
 | 6 | **Aggiornamento delle publications**: lo step 4 di `update_db.py` non fa nulla e i progetti nuovi hanno `n_publications = 0` | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#d5-publications), [Struttura dei dati](01-panoramica/struttura-dati.md#publications-step-4) |
-| 7 | **Mappa di Concept** (`assets/dmp_for_dash.html`): nella repo non c'è codice che la generi, e i progetti nuovi non compaiono finché non viene rifatta | [Pagina Concept](02-dashboard/pagina-concept.md#parti-statiche-da-tenere-allineate-a-mano), [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#d4-aggiornare-le-parti-statiche-della-dashboard) |
 
 ### Decisioni future
 
