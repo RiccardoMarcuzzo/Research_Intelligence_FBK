@@ -13,9 +13,10 @@
 
 import os
 import sys
+import shutil
 import argparse
 import json
-from datetime import date
+from datetime import date, datetime
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -103,6 +104,8 @@ PROJECT_GRAPH_DIR = os.path.join(os.path.dirname(__file__), '../data/project_gra
 # riassegnare i progetti già nel db quando la revisione crea un topic nuovo
 SPECTER_STORE_PATH = os.path.join(os.path.dirname(__file__), '../data/specter2.parquet')
 BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../data/backups')
+# data-ora del lancio nel nome delle copie di project_graphs/ e della mappa di Concept
+BACKUP_STAMP = datetime.now().strftime("%Y%m%d-%H%M%S")
 
 # topic modelling dei nuovi progetti
 TOPIC_SIM_THRESHOLD = config.getfloat('topics', 'similarity_threshold', fallback=0.92)
@@ -121,6 +124,23 @@ TOPIC_REVIEW = 'none' if args.no_review else 'provisional'
 # nomi delle colonne del vecchio export (project.json, organization.json); il formato
 # con un file per progetto non li usa
 COLUMNS = dict(config['columns']) if config.has_section('columns') else {}
+
+def backup_output(path):
+    """Copia path (file o cartella) in BACKUP_DIR prima che venga riscritto, con la data-ora
+    del lancio nel nome (es. project_graphs_<data-ora>/, dmp_for_dash_<data-ora>.html).
+    Una sola copia per lancio; niente se path non esiste."""
+    if not os.path.exists(path):
+        return
+    name, ext = os.path.splitext(os.path.basename(os.path.normpath(path)))
+    dest = os.path.join(BACKUP_DIR, f"{name}_{BACKUP_STAMP}{ext}")
+    if os.path.exists(dest):
+        return
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    if os.path.isdir(path):
+        shutil.copytree(path, dest)
+    else:
+        shutil.copy2(path, dest)
+
 
 db = lancedb.connect("../data")
 
@@ -145,10 +165,12 @@ if args.review:
         log = write_moves(db, changes, BACKUP_DIR)
         projects_tbl = db.open_table("projects_uncase")   # handle aggiornato dopo la scrittura
         print(f'{len(changes)} projects moved to new topics (log: {log}).')
+        backup_output(PROJECT_GRAPH_DIR)
         rebuild_project_graphs(projects_tbl, PROJECT_GRAPH_DIR)
         print('project graph successfully updated!')
         write_treemap(projects_tbl, load_topic2hier(TOPIC_HIER_PATH), TREEMAP_PATH)
         print(f'treemap successfully updated ({TREEMAP_PATH})!')
+        backup_output(DMP_PATH)
         update_datamapplot(projects_tbl, DATA_DIR, DMP_PATH)
     sys.exit(0)
 
@@ -349,6 +371,7 @@ if UPDATE_PARTICIPANTS:
     )
 
     # 2.5: aggiornamento di projects_graph
+    backup_output(PROJECT_GRAPH_DIR)
     rebuild_project_graphs(projects_tbl, PROJECT_GRAPH_DIR)
     print('project graph successfully updated!')
 
@@ -586,6 +609,7 @@ if UPDATE_PROJECTS:
     # topic nuovi, progetti nuovi e spostati cambiano la treemap della pagina Concept
     write_treemap(projects_tbl, load_topic2hier(TOPIC_HIER_PATH), TREEMAP_PATH)
     print(f'treemap successfully updated ({TREEMAP_PATH})!')
+    backup_output(DMP_PATH)
     update_datamapplot(projects_tbl, DATA_DIR, DMP_PATH)
 
 

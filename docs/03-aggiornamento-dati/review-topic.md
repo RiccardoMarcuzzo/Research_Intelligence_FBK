@@ -89,7 +89,29 @@ Un progetto che non c'entra con il percorso del cluster si tratta nella colonna 
 
 Tutti i progetti, di **qualunque foglio**, con lo stesso percorso nuovo formano **un solo topic**. Quindi due cluster che trattano lo stesso tema si uniscono scrivendo lo stesso percorso.
 
-> **Criteri di decisione: da completare.** Quando conviene accettare, rimappare o lasciare Unlabelled; con quali segnali (dimensione, titoli, vicinanza a un topic esistente) si giudica.
+### Criteri di decisione (proposta)
+
+> **Proposta da validare** con chi farà la review: non sono regole decise dal gruppo, ma un modo di usare i segnali che il foglio mostra.
+
+Per ogni cluster il foglio dà quattro segnali: il **numero di progetti**, le **parole chiave**, i **5 topic esistenti più simili** (con la similarità) e i **titoli** ordinati dal più rappresentativo. Si consiglia di leggere almeno i primi 10 titoli e qualcuno in fondo alla lista (i meno rappresentativi), poi di scegliere così:
+
+| Situazione | Decisione |
+|---|---|
+| I titoli parlano di un tema già presente tra i 5 topic simili (o nel foglio Gerarchia), solo con parole diverse | **Percorso esistente**: si scrive il percorso di quel topic. Nessun topic nuovo |
+| Tema coerente, ben distinto dai topic simili, che ha senso come voce della tassonomia e che probabilmente tornerà nei prossimi export | **Percorso nuovo**, sotto la categoria più vicina. Un cluster piccolo (5-10 progetti) va bene se il tema è netto: il topic crescerà con gli aggiornamenti e prenderà anche progetti già nel db (1.8) |
+| Due o più cluster sullo stesso tema | **Lo stesso percorso nuovo** in tutti: diventano un solo topic |
+| Tema coerente ma troppo stretto per la tassonomia (un singolo progetto con i suoi spin-off, un evento) | Percorso esistente più vicino, oppure niente (resta il topic provvisorio) |
+| Cluster eterogeneo, titoli senza un tema comune, o progetti puramente amministrativi (supporto, coordinamento, premi, infrastrutture generiche) | **`Unlabelled`**: l'alias farà finire `Unlabelled` anche i progetti simili dei prossimi aggiornamenti, senza tornare in review |
+| Cluster per lo più coerente con qualche progetto fuori tema | Percorso del cluster + **Altro topic** per i progetti fuori tema |
+| Indecisione | Lasciare vuoto: il cluster resta al topic provvisorio, che è già il topic esistente più vicino al suo centro |
+
+Altri accorgimenti:
+
+- **Un topic nuovo costa più di un percorso esistente**: modifica la tassonomia per sempre (rimuoverlo vuol dire ripristinare il modello). Nel dubbio tra percorso esistente e nuovo, meglio l'esistente.
+- **Similarità con i topic esistenti.** Con Specter2 sono tutte alte (2.2), quindi conta il confronto: se il primo dei 5 topic simili stacca nettamente gli altri e i titoli tornano, è probabile che il cluster sia una variante di quel topic.
+- **Nomi**: stile della tassonomia esistente (inglese, sostantivi, iniziali maiuscole come `Climate Modelling`), senza sigle se non molto note. Prima di inventare una categoria intermedia, controllare nel foglio Gerarchia se ne esiste già una adatta.
+- **`Unlabelled` sui cluster con prudenza**: l'alias assorbirà in futuro i progetti simili, quindi va usato solo per gruppi che davvero non devono avere un topic.
+- **Isolati**: lasciarli vuoti è la scelta normale. Si dà un percorso solo a un progetto chiaramente riconducibile a un topic esistente, o a più isolati che insieme formano un tema (stesso percorso nuovo).
 
 ## 1.5 Regole del percorso
 
@@ -132,7 +154,7 @@ Se ci sono errori, esce con `No database was modified.` e si corregge il foglio.
 1. i **topic nuovi** e gli alias entrano nel modello e in `topic2hier.json` (dopo averne copiato la versione precedente in `data/backups/`);
 2. i progetti del foglio il cui topic cambia vengono riscritti (`topic_name` e `topic_name_hierarchy`, in `projects_uncase` e in `participants`);
 3. i **progetti già presenti nel db** che somigliano a un topic nuovo passano a quel topic (1.8);
-4. i grafi dei progetti e la treemap vengono rigenerati.
+4. i grafi dei progetti, la treemap e la mappa di Concept vengono rigenerati (prima ne viene fatta una copia in `data/backups/`).
 
 Tutte le riscritture di topic sono in un unico log, `data/backups/reassign_<data-ora>.json`, con i topic di prima e la versione delle tabelle prima della modifica.
 
@@ -158,8 +180,9 @@ Ogni progetto tiene il topic esistente più vicino. Nessun foglio, nessun topic 
 | Gerarchia | `data/topic2hier.json` | Stesso momento |
 | Backup di modello e gerarchia | `data/backups/old_topic_model_<data-ora>/` e `topic2hier_<data-ora>.json` | Prima di ogni modifica del modello |
 | Log delle riscritture | `data/backups/reassign_<data-ora>.json` | Con `--review`; contiene i topic di prima e la versione delle tabelle prima della modifica |
+| Backup di grafi e mappa | `data/backups/project_graphs_<data-ora>/` e `dmp_for_dash_<data-ora>.html` | Con `--review`, se dei progetti cambiano topic, prima di rigenerarli |
 
-> **Ripristino: da completare.** Come tornare indietro (modello e gerarchia dalle copie in `data/backups/`, tabelle dalla versione indicata nel log) andrà descritto nella sezione sulle verifiche e il rollback.
+**Ripristino**: modello e gerarchia dalle copie in `data/backups/`, tabelle `projects_uncase` e `participants` alla versione in `versions_before` del log, grafi e mappa dalle copie (o rigenerati). La procedura è in [Eseguire l'aggiornamento dei dati, "Tornare indietro"](eseguire-update-db.md#tornare-indietro).
 
 Un dettaglio utile dal codice: con `--review` il modello e la gerarchia vengono salvati **prima** che i progetti siano riscritti nel db. Se il programma si interrompe tra i due momenti, il modello contiene già i topic nuovi mentre i progetti hanno ancora i topic provvisori. Rilanciare `--review` con lo stesso foglio non è sicuro: un percorso nuovo è ormai un percorso esistente, quindi i progetti del foglio vengono assegnati a quei topic ma i progetti vecchi non si spostano e gli alias `Unlabelled` dei cluster verrebbero creati una seconda volta. Per un risultato pulito si ripristinano modello e gerarchia dal backup (`data/backups/`) e si rilancia.
 

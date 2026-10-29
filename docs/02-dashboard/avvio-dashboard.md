@@ -93,7 +93,17 @@ Se il servizio cambia indirizzo, oggi va modificato l'URL nel codice.
 
 ## Deploy
 
-> **Da completare:** sezione di deploy per il nuovo server.
+> **Da completare:** il deploy sul nuovo server non è ancora stato fatto. Mancano: dove gira l'app, come si avvia (servizio di sistema, container, ...), configurazione del reverse proxy e valore di `--path`.
+
+Quello che il codice impone già, e che il deploy deve rispettare:
+
+- **Cartella di lavoro = radice della repo.** `data/`, `assets/` e `.env` sono letti con percorsi relativi alla cartella corrente.
+- **`data/` completa** sul server (vedi sopra): la pipeline di aggiornamento può girare su un'altra macchina e la cartella va poi copiata, a dashboard ferma.
+- **`--path` uguale al prefisso del reverse proxy** (oggi il default è `/research_intelligence/`), e il proxy deve inoltrare il percorso senza toglierlo. `/` reindirizza a `<path>query`.
+- **Server.** `python app.py` usa il server integrato di Dash/Flask, in ascolto su `0.0.0.0` alla porta `--port`, con `debug=False`. Non c'è un server WSGI (gunicorn o simili) già configurato: se lo si vuole usare, va tenuto conto che gli argomenti `--path` e `--port` sono letti all'import di `utils.py`.
+- **Memoria.** All'avvio si aprono le tabelle e alla prima ricerca con testo libero si carica bge-m3 (circa 2 GB su disco) su CPU. I grafi dei progetti restano in memoria dopo la prima lettura.
+- **Servizio LLM di relevance** raggiungibile dal server all'indirizzo scritto nel codice (`http://research-llm-api-matita:8060`), altrimenti il pulsante "Why is this relevant?" non risponde (il resto funziona).
+- **Riavvio dopo ogni aggiornamento dei dati**: l'app tiene in memoria elenco dei topic, contatori e grafi.
 
 ## Pagine collegate
 

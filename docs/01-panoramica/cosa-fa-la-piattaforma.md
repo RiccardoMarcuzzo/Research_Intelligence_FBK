@@ -37,8 +37,8 @@ I risultati si possono scaricare in CSV. Una seconda pagina, **Concept**, mostra
 - **Che cosa c'è per ogni progetto:** titolo, obiettivo, acronimo, programma, topic, organizzazioni partecipanti, deliverables e pubblicazioni.
 - **Origine dei metadati arricchiti:**
   - i topic sono calcolati dalla piattaforma (BERTopic su embedding Specter2), vedi [Review dei topic](../03-aggiornamento-dati/review-topic.md#21-il-modello-dei-topic);
-  - le pubblicazioni combinano CORDIS e Scopus;
-  - i deliverables vengono da CORDIS. Gli autori, dove presenti, vengono da un'estrazione con un modello GenAI sui PDF, fatta con una pipeline a parte (vedi [Struttura dei dati](struttura-dati.md#deliverables-e-publications)).
+  - le pubblicazioni combinano CORDIS e Scopus: quelle caricate in origine vengono da Scopus (con le affiliazioni degli autori), quelle dei progetti aggiunti dopo dall'export CORDIS (senza affiliazioni);
+  - i deliverables vengono da CORDIS. Gli autori, dove presenti, vengono da un'estrazione con un modello GenAI sui PDF (`extract_deliverables.py`, vedi [Struttura dei dati](struttura-dati.md#deliverables-e-publications)).
 
 ## Pagine collegate
 

@@ -2,7 +2,7 @@
 
 > **Scopo:** pagina di riferimento su cosa c'è nella cartella `data/` e negli altri file generati dalla pipeline, come sono fatte le tabelle, che cosa contengono i grafi dei progetti, come sono fatti i due formati dell'export CORDIS e come vengono gestiti deliverables e publications. Da consultare quando si lavora sui dati o sul codice che li legge.
 
-I numeri riportati (righe, dimensioni) sono quelli del db al 2026-10-22, dopo l'aggiornamento con l'export del 2026-10-15.
+I numeri riportati (righe, dimensioni) sono quelli del db al 2026-10-29, dopo l'aggiornamento con l'export del 2026-10-15 (step delle publications compreso).
 
 ## Cosa c'è in `data/`
 
@@ -13,16 +13,16 @@ La cartella `data/` **non è in git** (è nel `.gitignore`) e senza di essa la d
 | `projects_uncase.lance` | Un record per progetto: testo, topic, partecipanti (nomi), conteggi, embedding bge-m3 | dashboard, pipeline |
 | `participants.lance` | Un record per coppia progetto-organizzazione (e paese) | dashboard, pipeline |
 | `deliverables.lance` | Deliverables per progetto | dashboard, pipeline |
-| `publications.lance` | Pubblicazioni per progetto | dashboard |
+| `publications.lance` | Pubblicazioni per progetto | dashboard, pipeline |
 | `organisations.json` | Dizionario `{organisationID: nome}` con i nomi puliti delle organizzazioni (62.392 voci) | pipeline |
 | `topic2hier.json` | Gerarchia dei topic (formato in [Review dei topic](../03-aggiornamento-dati/review-topic.md#28-formato-di-topic2hierjson)) | dashboard (indirettamente), pipeline |
 | `project_graphs/` | Grafi di collaborazione, un file JSON per topic (vedi sotto) | dashboard |
 | `bge-m3-onnx/` | Modello bge-m3 in formato ONNX, per trasformare in vettore il testo libero della ricerca (circa 2 GB) | dashboard |
 | `old_topic_model/` | Modello BERTopic dei topic ([Review dei topic](../03-aggiornamento-dati/review-topic.md#21-il-modello-dei-topic)) | pipeline |
-| `specter2.parquet` | Embedding Specter2 di ogni progetto ([Review dei topic](../03-aggiornamento-dati/review-topic.md#210-archivio-degli-embedding-specter2)) | pipeline |
+| `specter2.parquet` | Embedding Specter2 di ogni progetto ([Review dei topic](../03-aggiornamento-dati/review-topic.md#211-archivio-degli-embedding-specter2)) | pipeline |
 | `umap_model.joblib` | Modello UMAP della mappa di Concept (circa 1,1 GB: contiene i dati di training), usato per proiettare i progetti nuovi ([Mappa dei progetti](#mappa-dei-progetti)) | pipeline |
 | `umap_2d.parquet` | Coordinate 2D di ogni progetto della mappa (`projectID`, `vector_2d`, non ruotate) | pipeline |
-| `backups/` | Copie automatiche di modello e gerarchia e log degli spostamenti | pipeline |
+| `backups/` | Copie automatiche di `project_graphs/`, `dmp_for_dash.html`, modello e gerarchia, e log degli spostamenti ([elenco](../03-aggiornamento-dati/eseguire-update-db.md#p6-fare-il-backup)) | pipeline |
 
 Due file generati dalla pipeline stanno invece in `assets/` (e quindi in git): `treemap.json` (la treemap di Concept) e `dmp_for_dash.html` (la mappa di Concept: vedi [Pagina Concept](../02-dashboard/pagina-concept.md)).
 
@@ -76,20 +76,21 @@ Un record per deliverable (224.838).
 | `title` | stringa | Titolo del deliverable |
 | `physUrl` | stringa | Link al documento (può mancare) |
 | `authors` | stringa JSON | `{"Nome Cognome": "Affiliazione"}`; `"{}"` se sconosciuti; l'affiliazione `Unknown` significa sconosciuta |
-| `id` | stringa | Id CORDIS del deliverable (es. `101069359_20_DELIVHORIZON`); `null` nelle righe scritte dalla vecchia pipeline |
+| `id` | stringa | Id CORDIS del deliverable (es. `101069359_20_DELIVHORIZON`); `null` nelle righe scritte dalla vecchia pipeline. La dashboard non lo legge |
 
 ### `publications`
 
-Un record per pubblicazione (503.067).
+Un record per pubblicazione (524.501: 503.067 da Scopus e 21.434 dall'export CORDIS).
 
 | Colonna | Tipo | Contenuto |
 |---|---|---|
 | `projectID` | int64 | Il progetto |
 | `title` | stringa | Titolo |
-| `authors` | stringa JSON | Come nei deliverables |
-| `physUrl` | stringa | Link alla pubblicazione (tipicamente Scopus) |
+| `authors` | stringa JSON | Come nei deliverables. Nelle righe dall'export l'affiliazione è sempre `Unknown` |
+| `physUrl` | stringa | Link alla pubblicazione: Scopus per le righe vecchie, `https://doi.org/<doi>` per quelle dall'export (può mancare) |
+| `id` | stringa | Id CORDIS della pubblicazione (es. `101069359_24824_PUBLIHORIZON`); `null` nelle righe da Scopus. La dashboard non lo legge |
 
-La pipeline **non modifica** questa tabella (vedi "Deliverables e publications").
+Lo step 4 aggiunge righe, ma non modifica né cancella quelle esistenti (vedi "Deliverables e publications").
 
 ### Indici
 
@@ -98,7 +99,7 @@ La pipeline **non modifica** questa tabella (vedi "Deliverables e publications")
 | `projects_uncase` | `projectID` (BTree), `topic_name_hierarchy` (LabelList) |
 | `participants` | `projectID` (BTree), `countryCode`, `activityType`, `fp` (Bitmap) |
 | `deliverables` | `projectID`, `id` (BTree) |
-| `publications` | `projectID` (BTree) |
+| `publications` | `projectID`, `id` (BTree) |
 
 ### Due regole che la dashboard richiede
 
@@ -146,7 +147,8 @@ CORDIS ha cambiato il formato del suo export JSON a maggio 2026. La pipeline leg
 | Struttura | file tabellari unici: `project.json`, `organization.json`, `webLink.json`, ... | un file per progetto, `project-rcn-<rcn>_en.json`, gerarchico come l'XML |
 | Nomi delle colonne | da `[columns]` in `settings.config` | fissi nel codice |
 | Titoli dei deliverables | non presenti | presenti |
-| Aggiornamento deliverables (step 3) | non possibile (lo step viene saltato) | possibile |
+| Aggiornamento deliverables (step 3) | solo con il file di `extract_deliverables.py` (altrimenti lo step viene saltato) | possibile |
+| Pubblicazioni (step 4) | non presenti (lo step viene saltato) | presenti |
 
 `load_projects`, `load_organizations`, `load_weblinks` restituiscono gli stessi DataFrame per entrambi i formati, con i nomi di colonna usati da `update_db.py`:
 
@@ -154,6 +156,7 @@ CORDIS ha cambiato il formato del suo export JSON a maggio 2026. La pipeline leg
 - organizzazioni: `organisationID, name, countryCode, activityType, role, netEcContribution, projectID`
 - link: `id, projectID, physUrl, type`
 - deliverables (solo records): `id, projectID, title, physUrl`
+- pubblicazioni (solo records): `id, projectID, title, authors, physUrl`
 
 ### Come si leggono i file `records`
 
@@ -164,6 +167,7 @@ CORDIS ha cambiato il formato del suo export JSON a maggio 2026. La pipeline leg
 | Partecipanti | Associazioni `organization`: ruolo da `attributes.type`, nome da `legalName`, paese da `address.country`, contributo da `attributes.netEcContribution` (stringa, convertita in numero) |
 | `activityType` | La categoria `organizationActivityType`, con la barra iniziale tolta (`/PRC` diventa `PRC`) |
 | Deliverables | Associazioni `result` della collezione `/deliverable`; `id` come `101069359_20_DELIVHORIZON`; `title` ufficiale; `physUrl` dal `webLink` annidato di tipo `projectDeliverable` (assente in 827 deliverables su 63.000 nell'export del 2026-10-15) |
+| Pubblicazioni | Associazioni `result` della collezione `/publication` (`/pubsum` e `/ipr` sono ignorate); `id` come `101069359_24824_PUBLIHORIZON`; autori dal testo libero `<authors>` dentro `details`; `physUrl` dal DOI |
 
 Altre note:
 
@@ -177,17 +181,28 @@ Altre note:
 
 ### Deliverables (step 3 di `update_db.py`)
 
-- La **fonte è l'export**, non un file parquet. I parametri `deliverables_file` e `deliverables_env_path` di `settings.config` li usa solo lo script di estrazione degli autori dai PDF (`legacy_extract_deliverables.py`, tenuto come riferimento).
+- **Due fonti possibili**, scelte con `deliverables_file` in `settings.config`:
+  - **vuoto (default)**: i deliverables dell'export, con gli autori già presenti nel db. Nessun PDF viene letto, quindi i deliverables nuovi restano senza autori;
+  - **il parquet scritto da `extract_deliverables.py`** (vedi [P3](../03-aggiornamento-dati/eseguire-update-db.md#p3-estrarre-gli-autori-dei-deliverables-facoltativo)): sostituisce sia l'export sia il riuso degli autori, che lo script ha già fatto; gli autori vengono scritti così come sono nel file.
 - Per ogni progetto dell'export (anche senza deliverables), la tabella segue l'export: titolo ufficiale e link correnti; i deliverables spariti da CORDIS vengono cancellati; le righe senza `id` (scritte dalla vecchia pipeline) vengono sostituite.
 - Gli **autori** si conservano: per `id`, altrimenti per `physUrl` dalle righe vecchie, altrimenti `"{}"`.
 - Le righe dei progetti **non presenti nell'export** (tutta la parte Horizon 2020, `id` nullo) non vengono toccate. Oggi: 63.280 righe con `id`, 161.558 senza, 174.794 con autori.
 - Le scritture vanno **prima** e le cancellazioni **dopo**, così un'interruzione non fa perdere autori. Una seconda esecuzione sullo stesso export non scrive niente.
 - `n_deliverables` in `projects_uncase` deve essere uguale al numero di righe del progetto in `deliverables` (compresi i deliverables senza link). Gli step 1 e 3 lo tengono allineato; lo step 3 scrive solo i conteggi cambiati.
-- Con un export `legacy` lo step 3 viene saltato (con `--deliverables` esplicito il programma si ferma).
+- Con un export `legacy` e `deliverables_file` vuoto lo step 3 viene saltato (con `--deliverables` esplicito il programma si ferma).
+- **Autori estratti con l'LLM.** `extract_deliverables.py` legge le prime 3 pagine del PDF e chiede all'LLM gli autori di quel documento con l'affiliazione (`Unknown` se manca), escludendo revisori, contributori e autori citati. Al 2026-10-29 non è ancora stato lanciato sui dati reali.
 
 ### Publications (step 4)
 
-**Da completare.** La tabella contiene pubblicazioni ottenute combinando CORDIS e Scopus, caricate fuori da questa pipeline. Lo step 4 apre la tabella e non fa altro: i progetti nuovi hanno `n_publications = 0` e nessuna riga in `publications`.
+- Le **503.067 righe già presenti** vengono da Scopus (con le affiliazioni degli autori) e **non vengono mai toccate**.
+- Lo step 4 aggiunge le pubblicazioni **dell'export** solo per i progetti che sono nell'export e che nel db hanno `n_publications = 0`: i progetti nuovi dello stesso lancio, ma anche progetti vecchi rimasti senza pubblicazioni. I progetti con `n_publications > 0` restano come sono. Poi aggiorna `n_publications` dei progetti scritti.
+- Le righe si scrivono con `merge_insert` sulla colonna `id`, aggiunta alla tabella alla prima esecuzione. Una seconda esecuzione sullo stesso export non scrive niente, perché i progetti trattati hanno ormai `n_publications > 0`.
+- Un progetto con `n_publications = 0` ma con righe nella tabella viene saltato con un avviso, per non creare doppioni.
+- **Autori**: l'export non ha le affiliazioni, quindi `authors` è `{"Nome": "Unknown"}` (la dashboard mostra solo il nome), `"{}"` se mancano (645 su 95.000). I nomi vengono dal campo di testo libero `<authors>`: separati da `;` se ce n'è uno, altrimenti da virgole, con `and`/`&` prima dell'ultimo. È un'euristica: un elenco come `Rossi, M., Bianchi, L.` viene spezzato in pezzi che non sono nomi interi.
+- **Link**: `https://doi.org/<doi>`, assente senza DOI (10.000 su 95.000). Anno, rivista, editore e tipo sono nell'export ma non vengono salvati.
+- Con un export `legacy` lo step viene saltato (con `--publications` esplicito il programma si ferma).
+- **Primo lancio** (export del 2026-10-15): 21.434 pubblicazioni per 4.075 progetti; 14.060 progetti dell'export non ne hanno nessuna. Oggi i progetti con `n_publications = 0` sono 25.714.
+- `publications_file` in `settings.config` è riservato a una futura fonte esterna (per esempio una nuova estrazione da Scopus, con le affiliazioni): l'import **non è implementato** e, se il parametro è compilato, lo step viene saltato.
 
 ## Cose da sapere sui dati
 

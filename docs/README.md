@@ -36,21 +36,26 @@ Il `README.md` nella radice della repo descrive in breve le funzionalità; qui c
 
 Parti della documentazione o del progetto che non sono ancora definite. Quando una voce viene risolta, va tolta da qui e dalla pagina in cui compare.
 
+I numeri delle voci non cambiano quando altre vengono risolte (le voci 3-7 sono state completate il 2026-10-29).
+
 ### Documentazione da scrivere
 
 | # | Cosa manca | Dove compare |
 |---|---|---|
-| 1 | **Deploy sul nuovo server**: dove gira l'app, come si avvia (servizio, container...), reverse proxy, valore di `--path` | [Avvio della dashboard](02-dashboard/avvio-dashboard.md#deploy) |
-| 2 | **Criteri di decisione della review dei topic**: quando creare un topic nuovo, usare uno esistente o lasciare `Unlabelled`, e con quali segnali | [Review dei topic](03-aggiornamento-dati/review-topic.md#14-un-cluster) |
-| 3 | **Verifiche e ripristino**: quali conteggi confrontare prima e dopo un aggiornamento e come tornare indietro da un backup (modello e gerarchia dalle copie, tabelle dalla versione indicata nel log) | [Review dei topic](03-aggiornamento-dati/review-topic.md#112-cosa-viene-scritto-e-dove-restano-i-backup), [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#d1-controllare-i-risultati) |
-| 4 | **Backup automatico** di `assets/dmp_for_dash.html` e `data/project_graphs/`, da aggiungere all'elenco dei backup | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#p6-fare-il-backup) |
+| 1 | **Deploy sul nuovo server** (non ancora fatto): dove gira l'app, come si avvia (servizio, container...), reverse proxy, valore di `--path`. I vincoli che vengono dal codice sono già scritti | [Avvio della dashboard](02-dashboard/avvio-dashboard.md#deploy) |
+| 2 | **Criteri di decisione della review dei topic**: c'è una proposta, da validare con chi farà la review e poi da trasformare in regole | [Review dei topic](03-aggiornamento-dati/review-topic.md#criteri-di-decisione-proposta) |
+
+### Operazioni da fare sui dati
+
+| # | Cosa | Dove compare |
+|---|---|---|
+| 10 | **Primo lancio di `extract_deliverables.py`** sull'export del 2026-10-15, poi `update_db.py --deliverables` con `deliverables_file`: oggi i deliverables Horizon Europe nuovi sono senza autori | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#p3-estrarre-gli-autori-dei-deliverables-facoltativo) |
 
 ### Funzioni da definire o completare
 
 | # | Cosa manca | Dove compare |
 |---|---|---|
-| 5 | **Estrazione dei deliverables** (`extract_deliverables`): nella repo c'è solo la vecchia versione, e lo step 3 di `update_db.py` non ne legge il risultato; i deliverables nuovi restano senza autori | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#p3-estrarre-i-deliverables-da-completare), [Struttura dei dati](01-panoramica/struttura-dati.md#deliverables-step-3-di-update_dbpy) |
-| 6 | **Aggiornamento delle publications**: lo step 4 di `update_db.py` non fa nulla e i progetti nuovi hanno `n_publications = 0` | [Eseguire l'aggiornamento dei dati](03-aggiornamento-dati/eseguire-update-db.md#d5-publications), [Struttura dei dati](01-panoramica/struttura-dati.md#publications-step-4) |
+| 11 | **Pubblicazioni da una fonte esterna** (`publications_file`, per esempio una nuova estrazione Scopus con le affiliazioni): il parametro è riservato ma l'import non è implementato. Oggi le pubblicazioni dei progetti nuovi vengono dall'export CORDIS, senza affiliazioni | [Struttura dei dati](01-panoramica/struttura-dati.md#publications-step-4) |
 
 ### Decisioni future
 

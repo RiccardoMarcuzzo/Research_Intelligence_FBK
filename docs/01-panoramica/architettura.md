@@ -46,8 +46,8 @@ flowchart LR
 
 | File | Ruolo |
 |---|---|
-| `update_db.py` | Orchestratore: aggiorna progetti, partecipanti, deliverables, publications. |
-| `cordis_loader.py` | Legge l'export CORDIS in entrambi i formati (legacy e records). |
+| `update_db.py` | Orchestratore: aggiorna progetti, partecipanti, deliverables, publications; con `--review` applica il foglio dei topic. |
+| `cordis_loader.py` | Legge l'export CORDIS in entrambi i formati (legacy e records): progetti, organizzazioni, link, deliverables e pubblicazioni (questi ultimi due solo records). |
 | `compute_embeddings.py`, `extract_embedding.py` | Calcolo degli embedding Specter2 e bge-m3. |
 | `specter_store.py` | Gestione di `data/specter2.parquet`. |
 | `extract_topic.py`, `topic_review.py`, `topic_review_sheet.py` | Assegnazione dei topic, revisione con foglio Excel e spostamento dei progetti già presenti su topic nuovi. |
@@ -58,7 +58,8 @@ flowchart LR
 | `format_name.py` | Normalizzazione dei nomi (utility). |
 | `settings.config` | Configurazione della pipeline. |
 | `test.py` | Suite di test (`pytest test.py -v`, da dentro `data_update/`). |
-| `legacy_extract_deliverables.py` | Vecchia estrazione LLM di titoli e autori dai PDF. Tenuto come riferimento. |
+| `extract_deliverables.py` | Estrae con un LLM gli autori dei deliverables dai PDF e scrive il parquet che lo step 3 di `update_db.py` può leggere. Si lancia a parte, prima di `update_db.py`. |
+| `tmp_simulate_review.py` | Simula il foglio di review dei topic su progetti già nel db, senza scrivere nulla (per provare il foglio). |
 
 I dettagli sull'aggiornamento stanno in [Eseguire l'aggiornamento dei dati](../03-aggiornamento-dati/eseguire-update-db.md); quelli sui dati in [Struttura dei dati](struttura-dati.md).
 
