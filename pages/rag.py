@@ -646,6 +646,9 @@ def download_csv(n_clicks, participants_data):
         "# — netEcContribution: the funding amount received by the organisation for the project.\n"
         "# — topic_name_hierarchy: the project's topic hierarchy.\n"
         "# — fp: the framework programme in which the project was delivered.\n"
+        "# — acronym: the project acronym.\n"
+        "# — title: the project title.\n"
+        "# — objective: the project summary.\n"
         f"# Rows: {len(df)}\n"
         "# ---\n"
     )
