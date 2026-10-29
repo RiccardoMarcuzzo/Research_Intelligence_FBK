@@ -352,6 +352,8 @@ def build_project_graph(projects_data, user_input, min_weight=2):
     overview_fig = build_overview_figure(nodes, edges, min_weight, bool(user_input))
 
     status_text = "Each box represents a topic: click to explore the projects within it." \
+    " Coloured projects are the ones retrieved by the search in 'project list'." \
+    " Gray projects are connected projects." \
     " Two projects are connected if they cover the same topic and share at least N collaborators" \
     " You can adjust N using the slider below."
 

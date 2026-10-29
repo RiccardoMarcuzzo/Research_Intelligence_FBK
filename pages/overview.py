@@ -28,7 +28,7 @@ layout = html.Div([
         "Since 1984, EU Framework Programmes have supported scientific excellence and collaboration across Europe. "
         "This dashboard lets you explore projects, organisations, research topics and helps you connect your research with the wider European landscape. ",
         html.B(html.I("Note: ")), 
-        html.I("Data regarding Horizon Europe projects are current through the end of 2024.")
+        html.I("Data regarding Horizon Europe projects are updated to 15 October 2026.")
     ],
     className="text-muted mb-4",
     style={'fontSize': '1.1rem', 'lineHeight': '1.6'}

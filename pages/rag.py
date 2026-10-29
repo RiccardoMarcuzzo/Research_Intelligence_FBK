@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from dash import dcc, html, Input, Output, State, ctx, callback, MATCH, no_update
 from dash.exceptions import PreventUpdate
 
-from utils import TITLE, COUNTRY_CODES, topic_names, deliverables_tbl, publications_tbl
+from utils import TITLE, COUNTRY_CODES, topic_names, deliverables_tbl, publications_tbl, projects_tbl
 import scripts._rag as script
 from scripts._rag__projects_list import build_accordion_items, build_table_content
 from scripts._rag__aggregated_view import build_aggregated_view, build_aggregated_graphs, build_graph
@@ -619,6 +619,19 @@ def download_csv(n_clicks, participants_data):
     df = pd.read_json(io.StringIO(participants_data), orient='split')
     df = df.drop(columns='topic_name')
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    project_ids = df['projectID'].tolist()
+    ids_sql = ids_sql = ", ".join(str(pid) for pid in project_ids)
+    project_df = (
+        projects_tbl
+        .search()
+        .where(f"projectID IN ({ids_sql})")
+        .select(["projectID", "acronym", "title", "objective"])
+        .limit(projects_tbl.count_rows())
+        .to_pandas()
+    )
+
+    df = df.merge(project_df, on='projectID', how='left')
 
     metadata = (
         f"# Exported: {timestamp}\n"
